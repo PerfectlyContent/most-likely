@@ -30,8 +30,9 @@ html[dir="rtl"] body{font-family:'Rubik',system-ui,sans-serif;}
 .g1{width:340px;height:340px;background:var(--lime);top:-120px;left:-110px;}
 .g2{width:300px;height:300px;background:var(--pink);bottom:-120px;right:-110px;}
 .g3{width:260px;height:260px;background:var(--blue);top:46%;right:-130px;opacity:.22;}
-.decor{position:fixed;z-index:-2;font-size:30px;filter:drop-shadow(2px 2px 0 rgba(23,21,15,.25));animation:drift 11s ease-in-out infinite;}
+.decor{position:fixed;z-index:-2;font-size:30px;filter:drop-shadow(2px 2px 0 rgba(23,21,15,.25));animation:drift 11s ease-in-out infinite;pointer-events:none;}
 @keyframes drift{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-14px) rotate(8deg)}}
+@media (max-width:640px){.decor{display:none;}}
 
 #app{max-width:540px;margin:0 auto;padding:20px 20px calc(26px + env(safe-area-inset-bottom));min-height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1;}
 .screen{flex:1;display:flex;flex-direction:column;animation:pop .45s cubic-bezier(.2,1.2,.4,1) both;}
@@ -1035,21 +1036,21 @@ function renderLobby(){
       <div class="qr-code">${esc(App.room.code)}</div>
       <button class="btn ghost sm mt-s" onclick="shareRoom()">${esc(t('share'))}</button>
     </div>
-    <div class="label mt" style="margin-inline-start:4px">${esc(t('players'))} <b style="color:var(--cream)">(${App.players.length})</b></div>
-    <div class="ppl-grid">
+    <div class="label mt" style="margin-inline-start:4px">${esc(t('players'))} <b style="color:var(--cream)" id="lCount">(${App.players.length})</b></div>
+    <div class="ppl-grid" id="lGrid">
       ${App.players.map(pl=>`<div class="ppl">
         <div class="ppl-av ${pl.is_host?'host':''}">${avImg(pl.avatar,'fill')}${pl.is_host?'<span class="crown-badge">👑</span>':''}</div>
         <div class="ppl-nm">${esc(pl.name)}${pl.id===App.me.id?' · '+esc(t('you')):''}</div>
       </div>`).join('')}
     </div>
     <div class="spacer"></div>
-    ${isHost ? `
+    <div id="lAction">${isHost ? `
       <button class="btn gold" ${enough?'':'disabled'} onclick="startGame()">${enough?esc(t('startGame')):esc(t('waitingPlayers'))}</button>
       <div class="hint mt-s">${enough?esc(t('allIn')):esc(t('needTwo'))}</div>
     ` : `
       <div class="hint mt">${esc(t('waitingHost'))}</div>
       ${!hasHost?`<button class="link mt-s" style="display:block;margin:8px auto 0" onclick="takeHost()">${esc(t('takeover'))}</button>`:''}
-    `}
+    `}</div>
     <button class="btn ghost mt-s" onclick="leaveRoom()">${esc(t('leave'))}</button>
   </div>`;
 }
@@ -1065,23 +1066,23 @@ function renderVoting(){
     <div class="topbar">
       <div class="pill">${esc(t('round'))} <b>${App.room.round}</b>/${App.room.total_rounds}</div>
       ${langSwitch()}
-      <div class="pill">${votedCount}/${total} ${esc(t('lockedIn'))}</div>
+      <div class="pill" id="vCount">${votedCount}/${total} ${esc(t('lockedIn'))}</div>
     </div>
     <div class="q-card"><div class="pre">${esc(t('mostLikelyTo'))}</div><div class="q">${esc(q)}</div></div>
     <div class="vote-main">
-      <div class="label" style="margin-inline-start:4px">${App.myVote?esc(t('youVoted')):esc(t('tapPick'))}</div>
+      <div class="label" id="vLabel" style="margin-inline-start:4px">${App.myVote?esc(t('youVoted')):esc(t('tapPick'))}</div>
       <div class="vote-grid">
         ${App.players.map(pl=>{
           const picked = App.myVote===pl.id;
-          return `<div class="vote ${picked?'picked':''}" onclick="castVote('${pl.id}')">
+          return `<div class="vote ${picked?'picked':''}" data-id="${pl.id}" onclick="castVote('${pl.id}')">
             <div class="vdisc">${avImg(pl.avatar,'fill')}</div><span class="nm">${esc(pl.name)}</span>
           </div>`;
         }).join('')}
       </div>
-      <div class="progress-note">${everyone?esc(t('everyoneVoted')):(App.myVote?esc(t('waitingOthers')):esc(t('lockVote')))}</div>
+      <div class="progress-note" id="vNote">${everyone?esc(t('everyoneVoted')):(App.myVote?esc(t('waitingOthers')):esc(t('lockVote')))}</div>
     </div>
-    ${isHost ? `<button class="btn gold" onclick="revealRound()">${everyone?esc(t('reveal')):esc(t('revealSkip'))}</button>` :
-      `<div class="hint mt-s">${esc(t('hostReveals'))}</div>`}
+    <div id="vAction">${isHost ? `<button class="btn gold" onclick="revealRound()">${everyone?esc(t('reveal')):esc(t('revealSkip'))}</button>` :
+      `<div class="hint mt-s">${esc(t('hostReveals'))}</div>`}</div>
   </div>`;
 }
 
@@ -1258,11 +1259,65 @@ function stateSig(){
     m:App.me&&App.me.is_host, p:App.players.map(p=>p.id+':'+(p.is_host?1:0)+':'+p.score),
     v:App.votes.map(v=>v.voter_id+'>'+v.target_id).sort() });
 }
+// Which "screen" is showing — a change here means a real transition (full render).
+// Same key + different stateSig = same screen, only live data moved (patch in place, no rebuild).
+function screenKey(){
+  if(App.view!=='room') return App.view;
+  return 'room|'+(App.room&&App.room.status)+'|'+(App.room&&App.room.round);
+}
+// Full render but keep the user where they were (no scroll jump / no avatar re-flash on mid-screen updates).
+function renderKeepScroll(){ const y=window.scrollY; render(); window.scrollTo(0,y); }
+// Patch only the parts that changed on the current screen, leaving the DOM (and scroll) intact.
+function softUpdate(){
+  const st=App.room&&App.room.status;
+  if(st==='voting') return softVoting();
+  if(st==='lobby') return softLobby();
+  renderKeepScroll();
+}
+function softVoting(){
+  // roster changed mid-round → grid must be rebuilt
+  if(document.querySelectorAll('.vote-grid .vote').length!==App.players.length) return renderKeepScroll();
+  const voters=new Set(App.votes.map(v=>v.voter_id));
+  const votedCount=voters.size, total=App.players.length;
+  const everyone=votedCount>=total&&total>0;
+  const isHost=App.me&&App.me.is_host;
+  const g=document.getElementById.bind(document);
+  if(g('vCount')) g('vCount').innerHTML=`${votedCount}/${total} ${esc(t('lockedIn'))}`;
+  if(g('vLabel')) g('vLabel').textContent=App.myVote?t('youVoted'):t('tapPick');
+  if(g('vNote')) g('vNote').textContent=everyone?t('everyoneVoted'):(App.myVote?t('waitingOthers'):t('lockVote'));
+  document.querySelectorAll('.vote-grid .vote').forEach(n=>n.classList.toggle('picked', n.getAttribute('data-id')===App.myVote));
+  if(g('vAction')) g('vAction').innerHTML = isHost ? `<button class="btn gold" onclick="revealRound()">${everyone?esc(t('reveal')):esc(t('revealSkip'))}</button>` : `<div class="hint mt-s">${esc(t('hostReveals'))}</div>`;
+}
+function softLobby(){
+  const isHost=App.me&&App.me.is_host;
+  const enough=App.players.length>=2;
+  const hasHost=App.players.some(x=>x.is_host);
+  const g=document.getElementById.bind(document);
+  if(g('lCount')) g('lCount').textContent='('+App.players.length+')';
+  if(g('lGrid')) g('lGrid').innerHTML=App.players.map(pl=>`<div class="ppl">
+      <div class="ppl-av ${pl.is_host?'host':''}">${avImg(pl.avatar,'fill')}${pl.is_host?'<span class="crown-badge">👑</span>':''}</div>
+      <div class="ppl-nm">${esc(pl.name)}${pl.id===App.me.id?' · '+esc(t('you')):''}</div>
+    </div>`).join('');
+  if(g('lAction')) g('lAction').innerHTML = isHost ? `
+      <button class="btn gold" ${enough?'':'disabled'} onclick="startGame()">${enough?esc(t('startGame')):esc(t('waitingPlayers'))}</button>
+      <div class="hint mt-s">${enough?esc(t('allIn')):esc(t('needTwo'))}</div>
+    ` : `
+      <div class="hint mt">${esc(t('waitingHost'))}</div>
+      ${!hasHost?`<button class="link mt-s" style="display:block;margin:8px auto 0" onclick="takeHost()">${esc(t('takeover'))}</button>`:''}
+    `;
+}
 let _polling=false;
 async function pollTick(){
   if(!App.room||!App.me||App.view!=='room'||_polling) return;
   _polling=true;
-  try{ const before=stateSig(); await Promise.all([loadRoom(), loadPlayers(), loadVotes()]); await ensureHost(); maybeAutoReveal(); if(stateSig()!==before) render(); }catch(e){}
+  try{
+    const beforeKey=screenKey(), beforeSig=stateSig();
+    await Promise.all([loadRoom(), loadPlayers(), loadVotes()]);
+    await ensureHost(); maybeAutoReveal();
+    const afterKey=screenKey(), afterSig=stateSig();
+    if(afterKey!==beforeKey) render();            // real screen change → full render (scroll to top is expected)
+    else if(afterSig!==beforeSig) softUpdate();   // same screen, data moved → patch in place
+  }catch(e){}
   _polling=false;
 }
 function startPolling(){ stopPolling(); App._poll=setInterval(pollTick, 2500); }
@@ -1329,7 +1384,7 @@ async function playAgain(){
 /* ===================== PLAYER ACTIONS ===================== */
 async function castVote(targetId){
   if(App.room.status!=='voting') return;
-  App.myVote=targetId; render();
+  App.myVote=targetId; softVoting();
   const { error } = await sb.from('wml_votes').upsert(
     { room_id:App.room.id, round:App.room.round, voter_id:App.me.id, target_id:targetId },
     { onConflict:'room_id,round,voter_id' });

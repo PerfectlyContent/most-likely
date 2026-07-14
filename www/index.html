@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#f2eee2" />
+<meta property="og:title" content="Most Likely / מי הכי?" />
+<title>Most Likely — Party Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Hanken+Grotesk:wght@500;600;700;800&family=Rubik:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+:root{
+  --paper:#f2eee2; --ink:#17150f; --white:#ffffff;
+  --lime:#c8f24a; --coral:#ff5b45; --blue:#3b62ff; --violet:#9d6bff; --sun:#ffcf3a; --pink:#ff5aa0; --teal:#17d3b0;
+  --muted:#5c574c;
+  --bd:2.5px solid var(--ink);
+  --hs:6px 6px 0 var(--ink); --hs-sm:4px 4px 0 var(--ink); --hs-lg:9px 9px 0 var(--ink);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{font-family:'Hanken Grotesk',system-ui,sans-serif;color:var(--ink);background:var(--paper);overflow-x:hidden;min-height:100dvh;position:relative;font-weight:600;}
+html[dir="rtl"] body{font-family:'Rubik',system-ui,sans-serif;}
+.sky{position:fixed;inset:0;z-index:-4;background:var(--paper);}
+.stars{position:fixed;inset:0;z-index:-3;opacity:1;
+  background-image:radial-gradient(circle, rgba(23,21,15,.08) 1.6px, transparent 1.7px);background-size:24px 24px;}
+.glow{position:fixed;z-index:-3;border-radius:50%;filter:blur(70px);opacity:.35;}
+.g1{width:340px;height:340px;background:var(--lime);top:-120px;left:-110px;}
+.g2{width:300px;height:300px;background:var(--pink);bottom:-120px;right:-110px;}
+.g3{width:260px;height:260px;background:var(--blue);top:46%;right:-130px;opacity:.22;}
+.decor{position:fixed;z-index:-2;font-size:30px;filter:drop-shadow(2px 2px 0 rgba(23,21,15,.25));animation:drift 11s ease-in-out infinite;}
+@keyframes drift{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-14px) rotate(8deg)}}
+
+#app{max-width:540px;margin:0 auto;padding:20px 20px calc(26px + env(safe-area-inset-bottom));min-height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1;}
+.screen{flex:1;display:flex;flex-direction:column;animation:pop .45s cubic-bezier(.2,1.2,.4,1) both;}
+@keyframes pop{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(14px) rotate(-2deg)}to{opacity:1;transform:none}}
+
+h1,h2,h3,.serif{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;margin:0;line-height:.98;letter-spacing:-.01em;}
+html[dir="rtl"] h1,html[dir="rtl"] h2,html[dir="rtl"] h3,html[dir="rtl"] .serif{font-family:'Rubik',sans-serif;font-weight:900;}
+.muted{color:var(--muted);} .center{text-align:center;}
+
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px;min-height:42px;}
+.lang{display:inline-flex;background:var(--white);border:var(--bd);border-radius:999px;padding:3px;box-shadow:var(--hs-sm);}
+.lang button{border:none;background:transparent;color:var(--ink);font-family:'Hanken Grotesk';font-weight:800;font-size:13px;padding:6px 14px;border-radius:999px;cursor:pointer;transition:.15s;}
+html[dir="rtl"] .lang button{font-family:'Rubik';}
+.lang button.on{background:var(--lime);}
+
+.brand{text-align:center;margin-top:6vh;}
+.brand .kicker{display:inline-block;font-family:'Hanken Grotesk';font-weight:800;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);background:var(--sun);border:var(--bd);border-radius:999px;padding:6px 14px;box-shadow:var(--hs-sm);transform:rotate(-2deg);}
+html[dir="rtl"] .brand .kicker{letter-spacing:.06em;font-family:'Rubik';}
+.brand h1{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(56px,18vw,92px);line-height:.9;margin-top:16px;color:var(--ink);text-transform:uppercase;}
+.brand .h1gold{display:inline-block;background:var(--lime);border:var(--bd);box-shadow:var(--hs);padding:0 14px 4px;border-radius:14px;transform:rotate(-2deg);margin-top:8px;}
+html[dir="rtl"] .brand h1{text-transform:none;}
+.brand .sub{font-family:'Hanken Grotesk';font-weight:700;font-size:17px;color:var(--muted);margin-top:20px;line-height:1.5;}
+html[dir="rtl"] .brand .sub{font-family:'Rubik';}
+.brand .orbit{font-size:28px;letter-spacing:8px;margin-top:12px;}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;cursor:pointer;
+  font-family:'Bricolage Grotesque','Hanken Grotesk';font-weight:800;font-size:19px;letter-spacing:.01em;color:var(--ink);
+  padding:16px 22px;border:var(--bd);border-radius:16px;box-shadow:var(--hs);text-transform:uppercase;
+  transition:transform .06s ease, box-shadow .06s ease;}
+html[dir="rtl"] .btn{font-family:'Rubik';font-weight:800;text-transform:none;}
+.btn:active{transform:translate(5px,5px);box-shadow:0 0 0 0 var(--ink);}
+.btn:disabled{opacity:.5;pointer-events:none;box-shadow:var(--hs-sm);}
+.btn.gold{background:var(--lime);}
+.btn.cream{background:var(--white);}
+.btn.ghost{background:var(--white);box-shadow:var(--hs-sm);font-size:15px;padding:12px;border-radius:13px;}
+.btn.sm{font-size:14px;padding:10px 14px;border-radius:12px;box-shadow:var(--hs-sm);}
+.stack{display:flex;flex-direction:column;gap:16px;} .stack.tight{gap:12px;}
+
+.card{background:var(--white);border:var(--bd);border-radius:20px;padding:20px;box-shadow:var(--hs);position:relative;}
+.field{width:100%;font-family:'Hanken Grotesk';font-weight:800;font-size:20px;text-align:center;color:var(--ink);
+  background:var(--white);border:var(--bd);border-radius:12px;padding:14px;outline:none;box-shadow:var(--hs-sm);transition:.1s;}
+html[dir="rtl"] .field{font-family:'Rubik';}
+.field::placeholder{color:rgba(23,21,15,.32);}
+.field:focus{background:#fffdf3;transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);}
+.label{font-family:'Hanken Grotesk';font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);margin:0 0 9px 2px;}
+html[dir="rtl"] .label{letter-spacing:.02em;font-family:'Rubik';text-transform:none;margin:0 2px 9px 0;}
+.code-field{letter-spacing:.4em;text-transform:uppercase;font-size:28px;font-weight:800;direction:ltr;}
+
+.avi{border-radius:50%;object-fit:cover;background:#ffe3ef;display:block;}
+.avi.sm{width:34px;height:34px;border:2px solid var(--ink);} .avi.md{width:46px;height:46px;} .avi.fill{width:100%;height:100%;}
+.avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+.av{aspect-ratio:1;border-radius:50%;cursor:pointer;border:var(--bd);box-shadow:var(--hs-sm);transition:transform .1s,box-shadow .1s;position:relative;background:var(--white);overflow:hidden;}
+.av .avi{width:100%;height:100%;}
+.av:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+.av.selected{box-shadow:5px 5px 0 var(--ink);transform:translate(-1px,-1px) rotate(-3deg);outline:3px solid var(--lime);outline-offset:-3px;}
+
+.chips{display:grid;gap:12px;} .chips.two{grid-template-columns:1fr 1fr;}
+.chip{cursor:pointer;border:var(--bd);background:var(--white);border-radius:16px;padding:14px 12px;text-align:center;box-shadow:var(--hs-sm);transition:transform .08s,box-shadow .08s;}
+.chip:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+.chip.selected{transform:translate(-1px,-1px) rotate(-1.5deg);box-shadow:var(--hs);}
+.chips .chip:nth-child(1).selected{background:var(--lime);} .chips .chip:nth-child(2).selected{background:var(--coral);}
+.chips .chip:nth-child(3).selected{background:var(--blue);color:var(--white);} .chips .chip:nth-child(4).selected{background:var(--sun);}
+.seg .chip.selected{background:var(--lime);}
+.badge{width:56px;height:56px;margin:0 auto 8px;border-radius:14px;display:flex;align-items:center;justify-content:center;border:var(--bd);box-shadow:var(--hs-sm);}
+.chips .chip:nth-child(1) .badge{background:var(--lime);} .chips .chip:nth-child(2) .badge{background:var(--coral);}
+.chips .chip:nth-child(3) .badge{background:var(--sun);} .chips .chip:nth-child(4) .badge{background:var(--teal);}
+.badge svg{width:40px;height:40px;display:block;}
+.chip .t{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;}
+html[dir="rtl"] .chip .t{font-family:'Rubik';font-weight:800;}
+.chip .d{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.25;font-family:'Hanken Grotesk';font-weight:600;}
+html[dir="rtl"] .chip .d{font-family:'Rubik';}
+.chip.selected .d{color:rgba(23,21,15,.7);}
+.chips .chip:nth-child(3).selected .d{color:rgba(255,255,255,.85);}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.seg .chip{padding:11px 6px;}
+.seg .chip .n{font-family:'Bricolage Grotesque';font-weight:800;font-size:24px;}
+.seg .chip .u{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:800;}
+
+.qr-card{text-align:center;background:var(--white);border:var(--bd);border-radius:20px;padding:20px;box-shadow:var(--hs);}
+.qr-title{display:inline-block;font-family:'Bricolage Grotesque';font-weight:800;font-size:20px;margin-bottom:16px;background:var(--sun);border:var(--bd);border-radius:10px;padding:4px 14px;box-shadow:var(--hs-sm);transform:rotate(-1.5deg);text-transform:uppercase;letter-spacing:.02em;}
+html[dir="rtl"] .qr-title{font-family:'Rubik';text-transform:none;}
+.qr-box{width:186px;height:186px;margin:0 auto;background:var(--white);border-radius:14px;padding:10px;border:var(--bd);box-shadow:var(--hs-sm);display:flex;align-items:center;justify-content:center;}
+.qr-box img{width:100%;height:100%;display:block;}
+.qr-box .qr-fallback{display:none;font-family:'Bricolage Grotesque';font-weight:800;font-size:46px;letter-spacing:.06em;color:var(--ink);}
+.qr-box.noqr img{display:none;} .qr-box.noqr .qr-fallback{display:flex;align-items:center;justify-content:center;height:100%;}
+.qr-code{font-family:'Bricolage Grotesque';font-weight:800;font-size:36px;letter-spacing:.16em;direction:ltr;color:var(--ink);margin-top:16px;}
+
+.ppl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 12px;}
+.ppl{display:flex;flex-direction:column;align-items:center;gap:8px;animation:rise .35s both;}
+.ppl-av{--ring:var(--lime);width:clamp(64px,20vw,84px);height:clamp(64px,20vw,84px);border-radius:50%;padding:4px;position:relative;background:var(--ring);border:var(--bd);box-shadow:var(--hs-sm);}
+.ppl:nth-child(6n+1) .ppl-av{--ring:var(--lime)} .ppl:nth-child(6n+2) .ppl-av{--ring:var(--coral)} .ppl:nth-child(6n+3) .ppl-av{--ring:var(--blue)}
+.ppl:nth-child(6n+4) .ppl-av{--ring:var(--sun)} .ppl:nth-child(6n+5) .ppl-av{--ring:var(--violet)} .ppl:nth-child(6n+6) .ppl-av{--ring:var(--teal)}
+.ppl-av.host{--ring:var(--sun);box-shadow:5px 5px 0 var(--ink);transform:rotate(-3deg);}
+.ppl-av .avi{width:100%;height:100%;border:2px solid var(--ink);}
+.crown-badge{position:absolute;top:-12px;inset-inline-end:-8px;font-size:22px;transform:rotate(12deg);filter:drop-shadow(1px 1px 0 rgba(23,21,15,.3));}
+.ppl-nm{font-family:'Hanken Grotesk';font-weight:800;font-size:14px;text-align:center;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);}
+html[dir="rtl"] .ppl-nm{font-family:'Rubik';}
+
+.q-card{background:var(--blue);color:var(--white);border:var(--bd);border-radius:20px;padding:26px 22px;text-align:center;box-shadow:var(--hs);position:relative;}
+.q-card .pre{font-family:'Hanken Grotesk';font-weight:800;font-size:13px;color:var(--lime);letter-spacing:.08em;text-transform:uppercase;position:relative;}
+html[dir="rtl"] .q-card .pre{font-family:'Rubik';letter-spacing:.02em;text-transform:none;}
+.q-card .q{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(25px,7.6vw,34px);line-height:1.08;margin-top:10px;position:relative;color:var(--white);}
+html[dir="rtl"] .q-card .q{font-family:'Rubik';font-weight:900;}
+
+.vote-main{flex:1;display:flex;flex-direction:column;gap:12px;min-height:0;overflow-y:auto;padding:8px 0 4px;}
+.vote-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:14px;}
+.vote{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;background:var(--white);min-height:78px;container-type:size;
+  border:var(--bd);border-radius:20px;padding:12px 8px;box-shadow:var(--hs-sm);transition:transform .08s,box-shadow .08s,background .1s;overflow:hidden;}
+.vote:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink);}
+.vote.picked{background:var(--lime);transform:translate(-1px,-1px) rotate(-1deg);box-shadow:var(--hs);}
+.vdisc{--ring:var(--coral);width:min(54cqh,86cqw,138px);height:min(54cqh,86cqw,138px);border-radius:50%;padding:4px;background:var(--ring);border:var(--bd);box-shadow:var(--hs-sm);}
+.vote:nth-child(6n+1) .vdisc{--ring:var(--coral)} .vote:nth-child(6n+2) .vdisc{--ring:var(--blue)} .vote:nth-child(6n+3) .vdisc{--ring:var(--sun)}
+.vote:nth-child(6n+4) .vdisc{--ring:var(--violet)} .vote:nth-child(6n+5) .vdisc{--ring:var(--teal)} .vote:nth-child(6n+6) .vdisc{--ring:var(--pink)}
+.vdisc .avi{width:100%;height:100%;border:2px solid var(--ink);}
+.vote .nm{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(15px,4.6cqw,19px);text-align:center;line-height:1.05;color:var(--ink);}
+html[dir="rtl"] .vote .nm{font-family:'Rubik';font-weight:800;}
+.progress-note{text-align:center;font-family:'Hanken Grotesk';font-weight:800;color:var(--muted);font-size:15px;}
+html[dir="rtl"] .progress-note{font-family:'Rubik';}
+
+.tally{display:flex;flex-direction:column;gap:10px;}
+.trow{background:var(--white);border:var(--bd);border-radius:14px;padding:11px 13px;animation:rise .4s both;box-shadow:var(--hs-sm);}
+.trow.top{background:var(--lime);box-shadow:var(--hs);transform:translate(-1px,-1px);}
+.trow .head{display:flex;align-items:center;gap:11px;}
+.trow .nm{font-family:'Bricolage Grotesque';font-weight:800;font-size:17px;flex:1;color:var(--ink);}
+html[dir="rtl"] .trow .nm{font-family:'Rubik';font-weight:800;}
+.trow .cnt{font-family:'Hanken Grotesk';font-weight:800;font-size:14px;color:var(--muted);}
+.trow .plus{font-family:'Bricolage Grotesque';font-weight:800;font-size:15px;color:var(--ink);background:var(--sun);border:2px solid var(--ink);border-radius:8px;padding:0 6px;}
+.bar{height:12px;border-radius:999px;margin-top:9px;background:#fff;border:2px solid var(--ink);overflow:hidden;}
+.bar > i{display:block;height:100%;background:var(--coral);width:0;transition:width .8s cubic-bezier(.2,1,.3,1);}
+.crown-banner{text-align:center;padding:6px 0 2px;}
+.crown-banner .cav{width:80px;height:80px;margin:0 auto;border-radius:50%;padding:4px;background:var(--sun);border:var(--bd);box-shadow:var(--hs);transform:rotate(-3deg);}
+.crown-banner .cav .avi{width:100%;height:100%;border:2px solid var(--ink);}
+.crown-banner .who{font-family:'Bricolage Grotesque';font-weight:800;font-size:25px;margin-top:10px;color:var(--ink);}
+html[dir="rtl"] .crown-banner .who{font-family:'Rubik';font-weight:900;}
+.crown-banner .cap{font-family:'Hanken Grotesk';font-weight:700;color:var(--muted);font-size:14px;}
+html[dir="rtl"] .crown-banner .cap{font-family:'Rubik';}
+
+.winner-card{margin:16px 0;border-radius:22px;padding:26px 22px 24px;text-align:center;position:relative;
+  background:var(--lime);border:var(--bd);box-shadow:var(--hs-lg);}
+.wframe{width:150px;height:150px;margin:0 auto 14px;border-radius:50%;padding:5px;position:relative;background:var(--white);border:var(--bd);box-shadow:var(--hs);transform:rotate(-3deg);}
+.wframe .avi{width:100%;height:100%;border:2px solid var(--ink);}
+.wframe .sparkle{position:absolute;font-size:26px;top:-14px;inset-inline-end:-6px;transform:rotate(14deg);}
+.wlabel{display:inline-block;font-family:'Bricolage Grotesque';font-weight:800;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--white);background:var(--ink);border-radius:8px;padding:4px 12px;transform:rotate(-1.5deg);}
+html[dir="rtl"] .wlabel{letter-spacing:.04em;font-family:'Rubik';}
+.wname{font-family:'Bricolage Grotesque';font-weight:800;font-size:clamp(36px,11vw,52px);margin-top:10px;color:var(--ink);text-transform:uppercase;line-height:1;}
+html[dir="rtl"] .wname{font-family:'Rubik';font-weight:900;text-transform:none;}
+.bars{display:flex;flex-direction:column;gap:12px;margin-top:4px;}
+.bar-row .bar-head{display:flex;justify-content:space-between;font-family:'Hanken Grotesk';font-weight:800;font-size:15px;margin-bottom:5px;color:var(--ink);}
+html[dir="rtl"] .bar-row .bar-head{font-family:'Rubik';}
+.bar-row .pctv{color:var(--ink);}
+.rbar{height:14px;border-radius:999px;background:#fff;border:var(--bd);overflow:hidden;box-shadow:var(--hs-sm);}
+.rbar > i{display:block;height:100%;background:var(--coral);width:0;transition:width .9s cubic-bezier(.2,1,.3,1);}
+.bars .bar-row:nth-child(1) .rbar>i{background:var(--coral)} .bars .bar-row:nth-child(2) .rbar>i{background:var(--blue)}
+.bars .bar-row:nth-child(3) .rbar>i{background:var(--violet)} .bars .bar-row:nth-child(4) .rbar>i{background:var(--teal)}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;}
+.pill{font-family:'Hanken Grotesk';font-weight:800;font-size:12.5px;padding:6px 12px;border-radius:999px;background:var(--white);border:var(--bd);color:var(--ink);white-space:nowrap;box-shadow:var(--hs-sm);}
+html[dir="rtl"] .pill{font-family:'Rubik';}
+.pill b{color:var(--ink);}
+.spacer{flex:1;} .mt{margin-top:16px;} .mt-s{margin-top:10px;} .mt-l{margin-top:24px;}
+.hint{text-align:center;color:var(--muted);font-size:14px;line-height:1.45;font-family:'Hanken Grotesk';font-weight:700;}
+html[dir="rtl"] .hint{font-family:'Rubik';}
+.link{color:var(--ink);font-weight:800;cursor:pointer;background:none;border:none;font-family:'Hanken Grotesk';font-size:14px;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;}
+html[dir="rtl"] .link{font-family:'Rubik';}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--white);font-family:'Bricolage Grotesque';font-weight:800;
+  padding:12px 20px;border-radius:999px;box-shadow:var(--hs);opacity:0;transition:.3s;z-index:99;pointer-events:none;font-size:15px;border:2px solid var(--ink);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.err{color:var(--coral);font-family:'Hanken Grotesk';font-weight:800;text-align:center;font-size:15px;min-height:20px;}
+.mini-lead{display:flex;flex-direction:column;gap:8px;}
+.ml-row{display:flex;align-items:center;gap:10px;font-family:'Hanken Grotesk';font-weight:800;font-size:15px;background:var(--white);border:2px solid var(--ink);border-radius:12px;padding:7px 12px;color:var(--ink);box-shadow:var(--hs-sm);}
+html[dir="rtl"] .ml-row{font-family:'Rubik';}
+.ml-row .r{width:24px;text-align:center;}
+.ml-row .nm{flex:1;} .ml-row .sc{color:var(--ink);background:var(--lime);border:2px solid var(--ink);border-radius:8px;padding:0 8px;font-weight:800;}
+.divider{height:2.5px;background:var(--ink);border-radius:2px;margin:18px 0;}
+.picker-preview{display:flex;align-items:center;gap:14px;justify-content:center;margin-bottom:14px;}
+.picker-preview .btn{width:auto;}
+.pp-frame{width:88px;height:88px;border-radius:50%;padding:4px;background:var(--lime);border:var(--bd);box-shadow:var(--hs-sm);flex:none;}
+.pp-frame .avi{width:100%;height:100%;border:2px solid var(--ink);}
+.shuffle{white-space:nowrap;}
+.style-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;}
+.style-chip{font-family:'Hanken Grotesk';font-weight:800;font-size:13px;padding:6px 12px;border:var(--bd);border-radius:999px;background:var(--white);box-shadow:var(--hs-sm);cursor:pointer;color:var(--ink);transition:transform .06s,box-shadow .06s;}
+html[dir="rtl"] .style-chip{font-family:'Rubik';}
+.style-chip:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--ink);}
+.style-chip.on{background:var(--lime);}
+.seed-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+</style>
+</head>
+<body>
+<div class="sky"></div><div class="stars"></div><div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+<div class="decor" style="top:10%;left:5%">⚡</div><div class="decor" style="top:17%;right:7%;animation-delay:-3s">🔥</div>
+<div class="decor" style="bottom:22%;left:7%;animation-delay:-6s">💯</div><div class="decor" style="bottom:12%;right:8%;animation-delay:-4s">✨</div>
+<div class="decor" style="top:46%;right:4%;animation-delay:-2s;font-size:24px">✌️</div><div class="decor" style="top:58%;left:4%;animation-delay:-5s;font-size:24px">😎</div>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const SUPABASE_URL = "https://gnmwjrndofzcuitasrfe.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdubXdqcm5kb2Z6Y3VpdGFzcmZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTMwNjIsImV4cCI6MjA4NTM2OTA2Mn0.gtfU5LqhwfvT-TFxVyqABNYGMhxdVkUIcFCiTwqyzk4";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { realtime:{ params:{ eventsPerSecond: 20 } } });
+
+/* ===================== i18n ===================== */
+const STR = {
+  en:{
+    kicker:"The party game", subtitle:"Everyone plays from their own phone.",
+    newGame:"Start a new game", joinGame:"Join with a code", hint3:"3+ players is the sweet spot. Gather your crew!",
+    back:"Back", newGameTag:"New game", joinTag:"Join game", setup:"Set up the game", yourName:"Your name", eg:"e.g. Alex",
+    pickAvatar:"Pick your character", chooseVibe:"Choose your vibe — the group picks", mostVotes:"Most votes means you…",
+    win:"WIN", winDesc:"Most points takes the crown", lose:"LOSE", loseDesc:"Most points = most guilty",
+    rounds:"Number of rounds", roundsU:"rounds", createGame:"Create game →", joinParty:"Join the party",
+    roomCode:"Room code", join:"Join game →", share:"📲 Share invite link", scanToJoin:"Scan to Join", players:"Players",
+    startGame:"Start game", waitingPlayers:"Waiting for players…", needTwo:"Need at least 2 players to start.",
+    allIn:"Everyone in? Tap start!", waitingHost:"Waiting for the host to start…", getComfy:"Get comfy. It's about to get loud.",
+    leave:"Leave", takeover:"Host gone? Take over", round:"Round", lockedIn:"in ✅",
+    tapPick:"Tap your pick 👇", youVoted:"You voted! Tap to change", yourPick:"Your pick",
+    everyoneVoted:"Everyone voted! ✨", waitingOthers:"Waiting for the others…", lockVote:"Lock in your vote!",
+    reveal:"Reveal results", revealSkip:"Reveal now (skip stragglers)", hostReveals:"Host reveals when everyone's in.",
+    mostLikelyTo:"Who's most likely to…", votes:"votes", vote1:"vote", tie:"It's a tie!", nobodyVoted:"Nobody voted?!",
+    awkward:"awkward…", leaderboard:"Leaderboard", guiltometer:"Guilt-o-meter", next:"Next question →",
+    seeResults:"See final results", waitingContinue:"Waiting for the host to continue…", gameOver:"Game over",
+    champion:"WINNER", mostLikelyLabel:"MOST LIKELY", championCap:"takes the crown with the most points!",
+    guiltyCap:"the most guilty of them all!", finalStandings:"Final standings", playAgain:"Play again",
+    leaveGame:"Leave game", hostAgain:"Host can start another round!", you:"you", pts:"pts",
+    copied:"Invite link copied! 📋", enterName:"Enter your name first 🙂", enterCode:"Enter the 4-letter room code 🔑",
+    enterBoth:"Enter your name too 🙂", noGame:"No game found with that code 🤔", ended:"That game already ended.",
+    creating:"Creating…", joining:"Joining…", voteFail:"Vote failed, tap again", takeoverDone:"You're the host now 👑"
+  },
+  he:{
+    kicker:"משחק המסיבה", subtitle:"כולם משחקים מהטלפון של עצמם.",
+    newGame:"התחילו משחק חדש", joinGame:"הצטרפו עם קוד", hint3:"הכי כיף עם 3 שחקנים ומעלה. אספו את החבר'ה!",
+    back:"חזרה", newGameTag:"משחק חדש", joinTag:"הצטרפות", setup:"הגדרת המשחק", yourName:"השם שלך", eg:"למשל דנה",
+    pickAvatar:"בחרו דמות", chooseVibe:"בחרו סגנון — הקבוצה מחליטה", mostVotes:"הכי הרבה קולות אומר שאתם…",
+    win:"מנצחים", winDesc:"הכי הרבה נקודות = הכתר", lose:"מפסידים", loseDesc:"הכי הרבה נקודות = הכי אשמים",
+    rounds:"מספר סיבובים", roundsU:"סיבובים", createGame:"← צרו משחק", joinParty:"הצטרפו למסיבה",
+    roomCode:"קוד חדר", join:"← הצטרפו", share:"📲 שתפו קישור הזמנה", scanToJoin:"סרקו כדי להצטרף", players:"שחקנים",
+    startGame:"התחילו משחק", waitingPlayers:"ממתינים לשחקנים…", needTwo:"צריך לפחות 2 שחקנים כדי להתחיל.",
+    allIn:"כולם פה? לחצו התחלה!", waitingHost:"ממתינים למנחה שיתחיל…", getComfy:"תתרווחו. עוד רגע זה מתלהט.",
+    leave:"יציאה", takeover:"המנחה נעלם? קחו פיקוד", round:"סיבוב", lockedIn:"✅",
+    tapPick:"בחרו את מי שמתאים 👇", youVoted:"הצבעתם! אפשר לשנות", yourPick:"הבחירה שלכם",
+    everyoneVoted:"כולם הצביעו! ✨", waitingOthers:"ממתינים לשאר…", lockVote:"נעלו את ההצבעה!",
+    reveal:"חשפו תוצאות", revealSkip:"חשפו עכשיו (דלגו על המתמהמהים)", hostReveals:"המנחה חושף כשכולם הצביעו.",
+    mostLikelyTo:"מי הכי", votes:"קולות", vote1:"קול", tie:"תיקו!", nobodyVoted:"אף אחד לא הצביע?!",
+    awkward:"מביך…", leaderboard:"טבלת מובילים", guiltometer:"מד־אשמה", next:"← השאלה הבאה",
+    seeResults:"← לתוצאות הסופיות", waitingContinue:"ממתינים שהמנחה ימשיך…", gameOver:"המשחק נגמר",
+    champion:"המנצח/ת", mostLikelyLabel:"הכי הכי", championCap:"לוקח את הכתר עם הכי הרבה נקודות!",
+    guiltyCap:"הכי אשם מכולם!", finalStandings:"דירוג סופי", playAgain:"עוד סיבוב",
+    leaveGame:"צאו מהמשחק", hostAgain:"המנחה יכול להתחיל סיבוב נוסף!", you:"אתם", pts:"נק'",
+    copied:"קישור ההזמנה הועתק! 📋", enterName:"קודם הכניסו שם 🙂", enterCode:"הכניסו קוד חדר בן 4 אותיות 🔑",
+    enterBoth:"הכניסו גם שם 🙂", noGame:"לא נמצא משחק עם הקוד הזה 🤔", ended:"המשחק הזה כבר הסתיים.",
+    creating:"יוצרים…", joining:"מצטרפים…", voteFail:"ההצבעה נכשלה, נסו שוב", takeoverDone:"אתם המנחה עכשיו 👑"
+  }
+};
+const t = (k)=> (STR[App.lang] && STR[App.lang][k]!=null) ? STR[App.lang][k] : STR.en[k];
+
+/* ===================== AVATARS (illustrated via DiceBear) ===================== */
+const AVSEEDS = ['Milo','Zoe','Kai','Mia','Leo','Nova','Ruby','Max','Luna','Finn','Ivy','Sky','Tara','Ben','Cleo','Remy','Pia','Sol','Juno','Rex'];
+const AV_STYLES=[{id:'adventurer',t:{en:'Peeps',he:'טיפוסים'}},{id:'fun-emoji',t:{en:'Emoji',he:'אימוג׳י'}},{id:'bottts',t:{en:'Bots',he:'רובוטים'}},{id:'lorelei',t:{en:'Cutie',he:'חמודים'}},{id:'micah',t:{en:'Mod',he:'מודרני'}},{id:'notionists',t:{en:'Ink',he:'קו'}}];
+function avatarUrl(av){ var style='adventurer', seed=av||'x'; if(av && av.indexOf(':')>-1){ var p=av.split(':'); style=p[0]||'adventurer'; seed=p.slice(1).join(':')||'x'; } return 'https://api.dicebear.com/9.x/'+style+'/svg?radius=50&backgroundColor=b6e3f4,c0aede,ffd5dc,d1f4e0,ffe9c7,ffdac1,e0d4ff&backgroundType=gradientLinear&seed='+encodeURIComponent(seed); }
+function curAv(){ var av=App.pendingAvatar||''; var i=av.indexOf(':'); return i>-1?{style:av.slice(0,i),seed:av.slice(i+1)}:{style:'adventurer',seed:av||'x'}; }
+function avImg(seed, cls){ const init=esc(String(seed||'?').trim().charAt(0).toUpperCase());
+  return '<img class="avi '+(cls||'')+'" src="'+avatarUrl(seed)+'" alt="" loading="lazy" onerror="avFallback(this)" data-i="'+init+'">'; }
+function avFallback(img){ img.onerror=null; const i=img.getAttribute('data-i')||'?';
+  const cols=['f3a6c0','a6e3d0','c3b3f2','f3cfa6','a6c8f3','f0b6a6','b6d7a6']; let h=0; const s=img.getAttribute('src')||i; for(let k=0;k<s.length;k++)h=(h*31+s.charCodeAt(k))>>>0; const c=cols[h%cols.length];
+  img.src='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" rx="60" fill="#'+c+'"/><text x="60" y="80" font-size="58" font-family="Nunito,sans-serif" font-weight="800" fill="#2a2d4a" text-anchor="middle">'+i+'</text></svg>'); }
+function qrUrl(d){ return 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=0&qzone=1&bgcolor=ffffff&color=17150f&data='+encodeURIComponent(d); }
+
+/* ===================== DATA ===================== */
+const PACKS = {
+  party:{ emoji:'🎉', name:{en:'Friends',he:'חברים'}, tag:{en:'Cheeky, safe for most groups',he:'קליל, מתאים כמעט לכולם'},
+    q:[
+      {en:'get lost in their own neighbourhood', he:'סביר שילכו לאיבוד ליד הבית של עצמם'},
+      {en:'text their ex at 2am', he:'סביר שישלחו הודעה לאקס בשתיים בלילה'},
+      {en:'become a millionaire from something ridiculous', he:'סביר שיתעשרו ממשהו הזוי לגמרי'},
+      {en:'survive a zombie apocalypse', he:'סביר שישרדו אפוקליפסת זומבים'},
+      {en:'cry during a Pixar movie', he:'סביר שיבכו בסרט של פיקסאר'},
+      {en:'start a conspiracy theory… and believe it', he:'סביר שימציאו תיאוריית קונספירציה ויאמינו לה'},
+      {en:'forget their own birthday', he:'סביר שישכחו את יום ההולדת של עצמם'},
+      {en:'adopt ten cats', he:'סביר שיאמצו עשרה חתולים'},
+      {en:'like a photo from 2014 while stalking someone', he:'סביר שיעשו לייק לתמונה מ-2014 באמצע סטוקינג'},
+      {en:'trip over absolutely nothing', he:'סביר שימעדו מכלום'},
+      {en:'fall asleep at the party first', he:'סביר שיירדמו ראשונים במסיבה'},
+      {en:'go viral for something embarrassing', he:'סביר שיהיו ויראליים בגלל משהו מביך'},
+      {en:'eat food off the floor', he:'סביר שיאכלו אוכל שנפל על הרצפה'},
+      {en:'show up late to their own wedding', he:'סביר שיאחרו לחתונה של עצמם'},
+      {en:'laugh at the worst possible moment', he:'סביר שיצחקו ברגע הכי לא מתאים'},
+      {en:'argue with a stranger online', he:'סביר שיתווכחו עם זר באינטרנט'},
+      {en:'name their kid something wild', he:'סביר שיתנו לילד שלהם שם משוגע'},
+      {en:'ghost the group chat for a week', he:'סביר שייעלמו מהקבוצה בוואטסאפ לשבוע'},
+      {en:'spend their last cash on snacks', he:'סביר שיבזבזו את הכסף האחרון על חטיפים'},
+      {en:'win a hot-dog eating contest', he:'סביר שינצחו בתחרות אכילת נקניקיות'},
+      {en:'become a reality TV star', he:'סביר שיהפכו לכוכב ריאליטי'},
+      {en:'talk their way out of a ticket', he:'יודעים לדבר את עצמם מחוץ לדוח'},
+      {en:'move abroad on a whim', he:'סביר שיעברו לחו״ל בהחלטה של רגע'},
+      {en:'lose their phone on a night out', he:'סביר שיאבדו את הטלפון בבילוי'},
+      {en:'sing karaoke stone-cold sober', he:'סביר שישירו קריוקי בלי טיפת אלכוהול'},
+      {en:'believe an obviously fake headline', he:'סביר שיאמינו לכותרת מזויפת לגמרי'},
+      {en:'start dancing when there is no music', he:'סביר שיתחילו לרקוד כשאין מוזיקה'},
+      {en:'get scared by their own reflection', he:'סביר שייבהלו מהבבואה של עצמם'},
+      {en:'over-share with a taxi driver', he:'סביר שיספרו יותר מדי לנהג מונית'},
+      {en:'still be scrolling at 4am', he:'סביר שעדיין יגללו בטלפון ב-4 לפנות בוקר'},
+      {en:'reply-all to the whole company by mistake', he:'סביר שיענו לכולם בטעות במייל של כל החברה'},
+      {en:'cancel plans to stay in bed', he:'סביר שיבטלו תוכניות כדי להישאר במיטה'},
+      {en:'become internet famous for a dance', he:'סביר שיתפרסמו באינטרנט בזכות ריקוד'},
+      {en:'keep a plant alive the longest', he:'יודעים להחזיק עציץ בחיים הכי הרבה זמן'},
+      {en:'win a singing contest', he:'סביר שיזכו בתחרות שירה'},
+      {en:'do cringey impressions', he:'מביך כשהם עושים חיקויים'},
+      {en:'strut in heels like a pro', he:'יודעים ללכת על עקבים'},
+      {en:'faint at the sight of blood', he:'סביר שיתעלפו כשיראו דם'},
+      {en:'screenshot the conversation and send it to the group chat', he:'סביר שיצלמו את השיחה וישלחו לקבוצה'},
+      {en:'leave someone on read for three days', he:'סביר שישאירו מישהו על נקרא שלושה ימים'},
+      {en:'order the exact same meal every single time', he:'סביר שיזמינו בדיוק את אותה מנה כל פעם'},
+      {en:'reply to a story with a single emoji', he:'סביר שיגיבו לסטורי עם סמיילי בודד'},
+      {en:'start a diet on a Monday and quit by lunch', he:'סביר שיתחילו דיאטה ביום ראשון ויוותרו עד הצהריים'},
+      {en:'unmute the group chat only to argue', he:'סביר שיבטלו השתקה לקבוצה רק כדי לריב'},
+      {en:'buy something just because it was on sale', he:'סביר שיקנו משהו רק כי היה במבצע'},
+      {en:'put on a whole outfit for a five-minute errand', he:'סביר שילבשו לוק שלם בשביל סידור של חמש דקות'},
+      {en:'forget where they parked the car', he:'סביר שישכחו איפה חנו עם האוטו'},
+      {en:'narrate their whole day to a stranger in line', he:'מביך כשהם מספרים את כל היום שלהם לזר בתור'},
+      {en:'keep 47 browser tabs open forever', he:'סביר שישאירו ארבעים ושבע לשוניות פתוחות לנצח'},
+      {en:'send a voice note that is nine minutes long', he:'סביר שישלחו הודעה קולית של תשע דקות'},
+      {en:'cry over a phone commercial', he:'סביר שיבכו מפרסומת של טלפון'},
+      {en:'double text before getting a reply', he:'סביר שישלחו הודעה שנייה לפני שקיבלו תשובה'},
+      {en:'check their own story views every ten minutes', he:'סביר שיבדקו מי צפה בסטורי כל עשר דקות'},
+      {en:'get emotionally attached to a fictional character', he:'סביר שיתקשרו רגשית לדמות מסדרה'},
+      {en:'pretend to understand the wine list', he:'מביך כשהם מעמידים פנים שהם מבינים בתפריט היינות'},
+      {en:'fall for every online quiz result', he:'סביר שיאמינו לכל תוצאה של מבחן באינטרנט'},
+      {en:'start a group project the night before', he:'סביר שיתחילו עבודת צוות בלילה שלפני'},
+      {en:'keep a gym membership they never use', he:'סביר שישמרו מנוי לחדר כושר שהם אף פעם לא מנצלים'},
+      {en:'talk during the best part of the movie', he:'מביך כשהם מדברים בקטע הכי טוב בסרט'},
+      {en:'google a symptom and diagnose the worst case', he:'סביר שיחפשו סימפטום בגוגל וישר יאבחנו את הכי גרוע'},
+      {en:'forget someone\'s name mid-introduction', he:'מביך כשהם שוכחים שם באמצע ההיכרות'},
+      {en:'say they will be there in five and arrive in forty', he:'סביר שיגידו מגיעים בעוד חמש ויגיעו בעוד ארבעים'},
+      {en:'reorganize the whole kitchen instead of studying', he:'סביר שיסדרו מחדש את כל המטבח במקום ללמוד'},
+      {en:'quote a movie no one else has seen', he:'סביר שיצטטו סרט שאף אחד אחר לא ראה'},
+      {en:'take forty photos to post one', he:'סביר שיצלמו ארבעים תמונות בשביל להעלות אחת'},
+      {en:'befriend the neighbourhood cat before the neighbours', he:'סביר שיתחברו לחתול השכונתי לפני השכנים'},
+      {en:'clap when the plane lands', he:'מביך כשהם מוחאים כפיים כשהמטוס נוחת'},
+      {en:'keep every receipt for no reason', he:'סביר שישמרו כל קבלה בלי שום סיבה'},
+      {en:'text back a paragraph to a one-word message', he:'סביר שיענו פסקה שלמה להודעה של מילה אחת'},
+      {en:'get way too invested in a stranger\'s drama', he:'סביר שיתחברו יותר מדי לדרמה של אנשים שהם לא מכירים'},
+      {en:'wear sunglasses indoors and think it looks cool', he:'מביך כשהם עם משקפי שמש בתוך הבית וחושבים שזה מגניב'},
+      {en:'restart a series from the beginning for the fifth time', he:'סביר שיתחילו סדרה מחדש מההתחלה בפעם החמישית'},
+      {en:'forget why they walked into the room', he:'סביר שישכחו למה הם נכנסו לחדר'},
+      {en:'make a playlist for a two-minute drive', he:'סביר שיכינו פלייליסט לנסיעה של שתי דקות'},
+      {en:'reply to the wrong chat by accident', he:'מביך כשהם עונים לצאט הלא נכון בטעות'},
+      {en:'hoard sauce packets from every takeaway', he:'סביר שיאגרו שקיות רוטב מכל משלוח'},
+      {en:'practice a text message out loud before sending', he:'סביר שיתרגלו הודעה בקול לפני ששולחים'},
+      {en:'trip while getting off the escalator', he:'מביך כשהם מועדים כשיורדים מהדרגנוע'},
+      {en:'buy a plant and forget it exists by Friday', he:'סביר שיקנו עציץ וישכחו שהוא קיים עד יום שישי'},
+      {en:'start every sentence with \'no offence but\'', he:'סביר שיתחילו כל משפט עם בלי להעליב אבל'},
+      {en:'have a favourite spot at every café', he:'יש להם מקום קבוע בכל בית קפה'},
+      {en:'reply \'lol\' without actually laughing', he:'סביר שיכתבו חחח בלי לצחוק באמת'},
+      {en:'wave back at someone who wasn\'t waving at them', he:'מביך כשהם מנופפים חזרה למישהו שלא נופף אליהם'},
+      {en:'keep score in a friendly game way too seriously', he:'סביר שיספרו נקודות במשחק ידידותי ברצינות מוגזמת'},
+      {en:'spend an hour choosing a profile picture', he:'סביר שיבזבזו שעה על לבחור תמונת פרופיל'},
+      {en:'text the group \'you up?\' at 3am', he:'סביר שישלחו לקבוצה ערים בשלוש לפנות בוקר'},
+      {en:'insist they know a shortcut and get lost', he:'סביר שיתעקשו שהם מכירים קיצור דרך ויתעו'},
+      {en:'laugh at their own joke before finishing it', he:'סביר שיצחקו מהבדיחה של עצמם לפני שסיימו אותה'},
+      {en:'hoard chargers and never find one that works', he:'סביר שיאגרו מטענים ואף פעם לא ימצאו אחד שעובד'},
+      {en:'give unsolicited advice to everyone', he:'סביר שיחלקו עצות שאף אחד לא ביקש לכולם'},
+      {en:'fake a phone call to avoid small talk', he:'סביר שיזייפו שיחת טלפון כדי להתחמק משיחת חולין'},
+      {en:'add things to the cart and never check out', he:'סביר שיוסיפו דברים לעגלה ולעולם לא ישלמו'},
+      {en:'reheat their coffee four times and never drink it', he:'סביר שיחממו את הקפה ארבע פעמים ולא ישתו אותו'},
+      {en:'start a podcast that no one asked for', he:'סביר שיפתחו פודקאסט שאף אחד לא ביקש'},
+      {en:'get hyped about plans and cancel at the last second', he:'סביר שיתלהבו מתוכניות ויבטלו ברגע האחרון'},
+      {en:'talk to their pet like it\'s a person', he:'סביר שידברו עם החיה שלהם כאילו זה בן אדם'},
+      {en:'reply to a meme faster than a real emergency', he:'סביר שיגיבו למם יותר מהר מאשר לחירום אמיתי'},
+      {en:'wear socks with sandals unironically', he:'מביך כשהם עם גרביים בסנדלים בלי שום בושה'},
+      {en:'collect tote bags they never use', he:'סביר שיאספו שקיות בד שהם אף פעם לא משתמשים בהן'},
+      {en:'read the whole menu and order the first thing', he:'סביר שיקראו את כל התפריט ויזמינו את הדבר הראשון'},
+      {en:'misjudge how many stairs are left and stumble', he:'מביך כשהם טועים בכמות המדרגות שנשארו ומועדים'},
+      {en:'answer a rhetorical question seriously', he:'מביך כשהם עונים ברצינות לשאלה רטורית'},
+      {en:'keep a to-do list and do none of it', he:'סביר שיכינו רשימת מטלות ולא יעשו אף אחת מהן'},
+      {en:'brag about waking up early once', he:'סביר שיתרברבו שקמו מוקדם פעם אחת'},
+      {en:'put ketchup on absolutely everything', he:'סביר שישימו קטשופ על ממש הכל'},
+      {en:'start speaking in an accent for no reason', he:'סביר שיתחילו לדבר במבטא בלי שום סיבה'},
+      {en:'get attached to a waiter after one nice interaction', he:'סביר שיתחברו למלצר אחרי אינטראקציה נחמדה אחת'},
+      {en:'forget to hit record on the important moment', he:'מביך כשהם שוכחים ללחוץ הקלטה ברגע החשוב'},
+      {en:'have strong opinions about pineapple on pizza', he:'יש להם דעות חזקות על אננס על פיצה'},
+      {en:'hide when the doorbell rings unexpectedly', he:'סביר שיתחבאו כשהפעמון מצלצל בלי אזהרה'},
+      {en:'keep talking after everyone has said goodbye', he:'מביך כשהם ממשיכים לדבר אחרי שכולם כבר נפרדו'},
+      {en:'rearrange the whole room at midnight', he:'סביר שיסדרו מחדש את כל החדר בחצות'},
+      {en:'overthink a text for twenty minutes', he:'סביר שיחשבו יותר מדי על הודעה במשך עשרים דקות'},
+      {en:'cheer for the villain in every movie', he:'סביר שיעודדו את הנבל בכל סרט'},
+      {en:'lose an argument and bring it up a week later', he:'סביר שיפסידו בוויכוח ויחזרו אליו שבוע אחרי'},
+      {en:'spend the whole party in the kitchen', he:'סביר שיבלו את כל המסיבה במטבח'},
+      {en:'own five water bottles and use none', he:'יש להם חמישה בקבוקי מים ולא משתמשים באף אחד'},
+      {en:'narrate what they are doing while doing it', he:'סביר שיספרו מה הם עושים תוך כדי שהם עושים'},
+      {en:'get competitive over a board game with kids', he:'סביר שייכנסו לתחרותיות במשחק קופסה מול ילדים'},
+      {en:'reply to a birthday wish two months late', he:'סביר שיענו לברכת יום הולדת באיחור של חודשיים'},
+      {en:'screenshot memes and never send them', he:'סביר שיצלמו ממים ואף פעם לא ישלחו'},
+      {en:'wear a jacket in summer because the AC is on', he:'סביר שילבשו מעיל בקיץ כי המזגן דלוק'},
+      {en:'swear they are not tired while yawning', he:'סביר שיישבעו שהם לא עייפים תוך כדי פיהוק'},
+      {en:'get lost in a supermarket looking for one item', he:'סביר שיתעו בסופר בחיפוש אחרי מוצר אחד'},
+      {en:'have a whole speech ready for an argument that never happens', he:'סביר שיכינו נאום שלם לוויכוח שלא באמת קורה'},
+      {en:'check the fridge every ten minutes hoping for new food', he:'סביר שיבדקו את המקרר כל עשר דקות בתקווה לאוכל חדש'},
+      {en:'apologize to furniture they bumped into', he:'מביך כשהם מתנצלים בפני רהיט שהם נתקלו בו'},
+      {en:'keep saying \'one more episode\' until sunrise', he:'סביר שימשיכו להגיד עוד פרק אחד עד הזריחה'},
+      {en:'walk into a spider web and lose their whole mind', he:'מביך כשהם נכנסים לקורי עכביש ומאבדים את זה לגמרי'},
+      {en:'text \'omw\' while still in bed', he:'סביר שיכתבו בדרך תוך כדי שהם עדיין במיטה'},
+      {en:'forget their password five seconds after changing it', he:'סביר שישכחו את הסיסמה חמש שניות אחרי שהחליפו אותה'},
+      {en:'start planning the group trip and do zero of it', he:'סביר שיתחילו לתכנן את הטיול הקבוצתי ולא יעשו כלום'},
+      {en:'eat the whole snack meant for sharing', he:'סביר שיאכלו את כל החטיף שהיה אמור להתחלק'},
+      {en:'insist they are fine while clearly not fine', he:'סביר שיתעקשו שהם בסדר כשברור שהם לא'},
+      {en:'get a nickname that follows them for life', he:'סביר שיקבלו כינוי שילווה אותם כל החיים'},
+      {en:'turn a quick coffee into a three-hour chat', he:'סביר שיהפכו קפה קצר לשיחה של שלוש שעות'},
+      {en:'reply to every notification except the important one', he:'סביר שיגיבו לכל התראה חוץ מהחשובה'},
+      {en:'declare it \'movie night\' and fall asleep in ten minutes', he:'סביר שיכריזו על ערב סרט וירדמו תוך עשר דקות'}
+    ]},
+  family:{ emoji:'🧸', name:{en:'Family',he:'משפחתי'}, tag:{en:'Totally clean — all ages',he:'נקי לגמרי — לכל הגילאים'},
+    q:[
+      {en:'become a famous inventor', he:'סביר שיהפכו לממציא מפורסם'},
+      {en:'eat dessert before dinner', he:'סביר שיאכלו קינוח לפני ארוחת ערב'},
+      {en:'talk to animals like they understand', he:'סביר שידברו עם חיות כאילו הן מבינות'},
+      {en:'win a staring contest', he:'סביר שינצחו בתחרות מבטים'},
+      {en:'get lost in a supermarket', he:'סביר שילכו לאיבוד בסופר'},
+      {en:'become a superhero', he:'סביר שיהפכו לגיבור על'},
+      {en:'look for their glasses while wearing them', he:'סביר שיחפשו את המשקפיים כשהם על האף'},
+      {en:'sing in the shower the loudest', he:'סביר שישירו במקלחת הכי בקול'},
+      {en:'build the tallest sandcastle', he:'סביר שיבנו את ארמון החול הכי גבוה'},
+      {en:'laugh so hard milk comes out their nose', he:'סביר שיצחקו עד שחלב יוצא להם מהאף'},
+      {en:'become a world-famous chef', he:'סביר שיהפכו לשף מפורסם בעולם'},
+      {en:'make friends with a squirrel', he:'סביר שיתחברו עם סנאי'},
+      {en:'sleep through their alarm', he:'סביר שיישנו דרך כל השעונים המעוררים'},
+      {en:'win a dance-off', he:'סביר שינצחו בקרב ריקודים'},
+      {en:'collect the most stickers', he:'סביר שיאספו הכי הרבה מדבקות'},
+      {en:'become the class clown', he:'סביר שיהיו ליצן הכיתה'},
+      {en:'get a brain-freeze from ice cream', he:'סביר שיחטפו כאב ראש מגלידה'},
+      {en:'read every book in the library', he:'סביר שיקראו כל ספר בספרייה'},
+      {en:'grow the biggest garden', he:'סביר שיגדלו את הגינה הכי גדולה'},
+      {en:'invent a new ice-cream flavour', he:'סביר שימציאו טעם גלידה חדש'},
+      {en:'trip over their own shoelaces', he:'סביר שימעדו על השרוכים של עצמם'},
+      {en:'become an astronaut', he:'סביר שיהפכו לאסטרונאוט'},
+      {en:'have the messiest bedroom', he:'סביר שיהיה להם החדר הכי מבולגן'},
+      {en:'high-five a stranger by accident', he:'סביר שייתנו כיף לזר בטעות'},
+      {en:'cry happy tears at a wedding', he:'סביר שיבכו מרוב שמחה בחתונה'},
+      {en:'win first prize at the science fair', he:'סביר שיזכו בפרס הראשון ביריד המדע'},
+      {en:'become a famous painter', he:'סביר שיהפכו לצייר מפורסם'},
+      {en:'wear mismatched socks on purpose', he:'סביר שילבשו גרביים לא תואמים בכוונה'},
+      {en:'save the day in an emergency', he:'סביר שיצילו את המצב בשעת חירום'},
+      {en:'become a professional napper', he:'יודעים לישון שנת צהריים כמו אלופים'},
+      {en:'narrate their pet\'s inner thoughts out loud', he:'סביר שידובבו את המחשבות של חיית המחמד בקול'},
+      {en:'build a blanket fort that takes over the living room', he:'סביר שיבנו מבצר שמיכות שישתלט על הסלון'},
+      {en:'forget why they walked into the kitchen', he:'סביר שישכחו למה נכנסו למטבח'},
+      {en:'name every stuffed animal in the house', he:'יודעים לתת שם לכל בובת פרווה בבית'},
+      {en:'eat cereal for dinner without shame', he:'סביר שיאכלו דגני בוקר לארוחת ערב בלי בושה'},
+      {en:'get too excited about a rainbow', he:'מביך כשמתלהבים יותר מדי מקשת בענן'},
+      {en:'turn any stick into a magic wand', he:'יודעים להפוך כל מקל לשרביט קסמים'},
+      {en:'sneeze loud enough to scare the cat', he:'סביר שיתעטשו חזק מספיק כדי להבהיל את החתול'},
+      {en:'make up a song about doing chores', he:'סביר שימציאו שיר על עשיית מטלות'},
+      {en:'hide veggies under the mashed potatoes', he:'יודעים להחביא ירקות מתחת לפירה'},
+      {en:'wear a superhero cape to the grocery store', he:'סביר שילבשו גלימת גיבור על לסופרמרקט'},
+      {en:'collect rocks that look like famous faces', he:'סביר שיאספו אבנים שנראות כמו פרצופים מפורסמים'},
+      {en:'give a dramatic speech to their goldfish', he:'סביר שינאמו נאום דרמטי לדג הזהב'},
+      {en:'fall asleep during movie night first', he:'סביר שיירדמו ראשונים בערב סרט'},
+      {en:'build a robot out of cardboard boxes', he:'יודעים לבנות רובוט מקופסאות קרטון'},
+      {en:'insist the family pet is smiling at them', he:'סביר שיתעקשו שחיית המחמד מחייכת אליהם'},
+      {en:'get syrup on absolutely everything', he:'סביר שימרחו סירופ ממש על הכל'},
+      {en:'reorganize the fridge by colour', he:'סביר שיסדרו את המקרר לפי צבעים'},
+      {en:'talk in a funny voice for an entire day', he:'סביר שידברו בקול מצחיק במשך יום שלם'},
+      {en:'start a pillow fight out of nowhere', he:'סביר שיפתחו קרב כריות משום מקום'},
+      {en:'count the stars until they fall asleep', he:'סביר שיספרו כוכבים עד שיירדמו'},
+      {en:'make the whole family late for being silly', he:'סביר שיאחרו את כל המשפחה בגלל שטויות'},
+      {en:'teach the dog a completely useless trick', he:'יודעים ללמד את הכלב טריק חסר תועלת לחלוטין'},
+      {en:'eat the last cookie and blame someone else', he:'סביר שיאכלו את העוגייה האחרונה ויאשימו מישהו אחר'},
+      {en:'build the world\'s longest domino chain', he:'סביר שיבנו את שרשרת הדומינו הארוכה בעולם'},
+      {en:'wear pajamas until noon on the weekend', he:'סביר שילבשו בגדי שינה עד הצהריים בסופש'},
+      {en:'pretend the floor is lava at family dinner', he:'סביר שיעשו כאילו הרצפה לבה בארוחה משפחתית'},
+      {en:'name a cloud after a family member', he:'סביר שיקראו לענן על שם בן משפחה'},
+      {en:'keep asking are we there yet on a road trip', he:'סביר שישאלו שוב ושוב הגענו כבר בטיול'},
+      {en:'hoard the good markers during craft time', he:'סביר שיאגרו את הטושים הטובים בזמן יצירה'},
+      {en:'make a mountain of bubbles in the bath', he:'יודעים לעשות הר של בועות באמבטיה'},
+      {en:'cheer the loudest at a kids\' soccer game', he:'סביר שיריעו הכי חזק במשחק כדורגל של ילדים'},
+      {en:'invent a secret family handshake', he:'יודעים להמציא לחיצת יד סודית למשפחה'},
+      {en:'get chocolate all over their face and deny it', he:'סביר שימרחו שוקולד על כל הפנים ויכחישו'},
+      {en:'start collecting something completely random', he:'סביר שיתחילו לאסוף משהו לגמרי אקראי'},
+      {en:'read the same bedtime story a hundred times', he:'סביר שיקראו את אותו סיפור לפני השינה מאה פעם'},
+      {en:'turn grocery shopping into an adventure', he:'יודעים להפוך קניות בסופר להרפתקה'},
+      {en:'make the funniest face in every photo', he:'תמיד עושים את הפרצוף הכי מצחיק בכל תמונה'},
+      {en:'befriend every dog at the park', he:'יודעים להתיידד עם כל כלב בפארק'},
+      {en:'build a pancake tower taller than their plate', he:'סביר שיבנו מגדל פנקייקים גבוה מהצלחת'},
+      {en:'forget the punchline in the middle of a joke', he:'מביך כששוכחים את סוף הבדיחה באמצע'},
+      {en:'wear their winter coat inside because it\'s cozy', he:'סביר שילבשו מעיל חורף בבית כי נעים'},
+      {en:'make animal sounds during a quiet moment', he:'סביר שישמיעו קולות של חיות ברגע שקט'},
+      {en:'turn the couch into a pirate ship', he:'יודעים להפוך את הספה לספינת פיראטים'},
+      {en:'save every drawing they ever made', he:'סביר שישמרו כל ציור שאי פעם ציירו'},
+      {en:'get the whole car singing along', he:'יודעים לגרום לכל המכונית לשיר יחד'},
+      {en:'spend an hour choosing which cereal to buy', he:'סביר שיבזבזו שעה בבחירת דגני בוקר'},
+      {en:'make friends with the mailman', he:'יודעים להתיידד עם הדוור'},
+      {en:'trip while walking and wave like it was on purpose', he:'מביך כשמועדים בהליכה ומנופפים כאילו זה בכוונה'},
+      {en:'declare themselves the family board game champion', he:'סביר שיכריזו על עצמם אלופי משחקי הקופסה של המשפחה'},
+      {en:'put googly eyes on everything in the kitchen', he:'סביר שידביקו עיניים זזות על הכל במטבח'},
+      {en:'get up early just to watch cartoons', he:'סביר שיקומו מוקדם רק כדי לראות סרטים מצוירים'},
+      {en:'keep a snack stash in their room', he:'יש להם מחסן חטיפים סודי בחדר'},
+      {en:'argue that dessert is a food group', he:'סביר שיטענו שקינוח הוא קבוצת מזון'},
+      {en:'give the best bear hugs in the family', he:'יודעים לחבק חיבוקי דוב הכי טובים במשפחה'},
+      {en:'make up rules to a game as they go', he:'סביר שימציאו חוקים למשחק תוך כדי'},
+      {en:'spend all afternoon jumping in puddles', he:'סביר שיקפצו בשלוליות כל אחר הצהריים'},
+      {en:'talk during the best part of the movie', he:'מביך כשמדברים בדיוק בחלק הכי טוב בסרט'},
+      {en:'build an epic marble run down the stairs', he:'יודעים לבנות מסלול גולות אדיר במדרגות'},
+      {en:'pretend to be a weather reporter at breakfast', he:'סביר שיעשו כאילו הם חזאים בארוחת בוקר'},
+      {en:'sneak an extra scoop of ice cream', he:'סביר שיגניבו כדור גלידה נוסף'},
+      {en:'keep every drawing on the fridge for years', he:'סביר שישאירו כל ציור על המקרר במשך שנים'},
+      {en:'get overly competitive at mini golf', he:'סביר שייעשו תחרותיים מדי במיני גולף'},
+      {en:'name the family car like it\'s a pet', he:'סביר שיתנו שם למכונית כאילו היא חיית מחמד'},
+      {en:'wear a costume for no special reason', he:'סביר שילבשו תחפושת בלי שום סיבה מיוחדת'},
+      {en:'make the best blanket burritos', he:'יודעים לעשות בוריטו שמיכות הכי טוב'},
+      {en:'get distracted by a butterfly mid sentence', he:'מביך כשמתפזרים בגלל פרפר באמצע משפט'},
+      {en:'build a fort and refuse to leave it', he:'סביר שיבנו מבצר ויסרבו לצאת ממנו'},
+      {en:'turn bath time into an ocean adventure', he:'יודעים להפוך אמבטיה להרפתקה בים'},
+      {en:'leave a trail of shoes all over the house', he:'סביר שישאירו שובל של נעליים בכל הבית'},
+      {en:'recite every line from a favourite cartoon', he:'יודעים לדקלם כל שורה מסרט מצויר אהוב'},
+      {en:'make a sandwich with way too many layers', he:'סביר שיכינו כריך עם יותר מדי שכבות'},
+      {en:'invent a brand new holiday to celebrate', he:'יודעים להמציא חג חדש לגמרי לחגוג'},
+      {en:'cheer for the underdog in every game', he:'תמיד מעודדים את החלש בכל משחק'},
+      {en:'collect every seashell on the beach', he:'סביר שיאספו כל צדף על החוף'},
+      {en:'fall asleep in the car every single trip', he:'סביר שיירדמו ברכב בכל נסיעה'},
+      {en:'make the whole family play their favourite game', he:'סביר שישכנעו את כל המשפחה לשחק במשחק שלהם'},
+      {en:'draw on the foggy window every morning', he:'סביר שיציירו על החלון המעורפל כל בוקר'},
+      {en:'keep asking one more story before bed', he:'סביר שיבקשו עוד סיפור אחד לפני השינה'},
+      {en:'hide during hide and seek and actually fall asleep', he:'סביר שיתחבאו במחבואים ובאמת יירדמו'},
+      {en:'give the family dog a fancy new haircut', he:'סביר שיעשו לכלב תספורת מפוארת חדשה'},
+      {en:'turn a cardboard box into a spaceship', he:'יודעים להפוך קופסת קרטון לחללית'},
+      {en:'make everyone laugh at the dinner table', he:'תמיד מצחיקים את כולם ליד שולחן האוכל'},
+      {en:'get lost following a snail across the garden', he:'סביר שילכו לאיבוד במעקב אחרי חילזון בגינה'},
+      {en:'insist on being the banker in every board game', he:'סביר שיתעקשו להיות הבנקאי בכל משחק קופסה'},
+      {en:'wear socks with sandals proudly', he:'סביר שילבשו גרביים עם סנדלים בגאווה'},
+      {en:'build a snowman bigger than the front door', he:'סביר שיבנו איש שלג גדול מהדלת הראשית'},
+      {en:'make up a dance for brushing teeth', he:'יודעים להמציא ריקוד לצחצוח שיניים'},
+      {en:'keep a jar of coins for a mystery purchase', he:'יש להם צנצנת מטבעות לקנייה מסתורית'},
+      {en:'narrate their own life like a nature documentary', he:'יודעים לתאר את חייהם כמו סרט טבע'},
+      {en:'get seconds before finishing firsts', he:'סביר שיקחו מנה שנייה לפני שסיימו את הראשונה'},
+      {en:'turn every walk into a treasure hunt', he:'יודעים להפוך כל טיול לחיפוש אוצר'},
+      {en:'burst out laughing in the quietest room', he:'מביך כשפורצים בצחוק בחדר הכי שקט'},
+      {en:'keep the good seat warm and never give it up', he:'סביר שישמרו על הכיסא הטוב ולעולם לא יוותרו עליו'},
+      {en:'make a giant mess baking cookies', he:'סביר שיעשו בלגן ענק באפיית עוגיות'},
+      {en:'believe in every made up family legend', he:'סביר שיאמינו בכל אגדה משפחתית מומצאת'},
+      {en:'wave at every train that passes by', he:'תמיד מנופפים לכל רכבת שעוברת'},
+      {en:'carry a snack for every possible emergency', he:'יש להם חטיף לכל מקרה חירום אפשרי'},
+      {en:'turn folding laundry into a basketball game', he:'יודעים להפוך קיפול כביסה למשחק כדורסל'},
+      {en:'hum a tune nonstop until everyone joins in', he:'סביר שיפזמו מנגינה בלי הפסקה עד שכולם יצטרפו'}
+    ]},
+  spicy:{ emoji:'🌶️', name:{en:'Spicy',he:'חריף'}, tag:{en:'Bolder & flirtier — 18+',he:'נועז וחצוף יותר — 18+'},
+    q:[
+      {en:'send a risky text and regret it', he:'סביר שישלחו הודעה מסוכנת ומיד יתחרטו'},
+      {en:'have a secret crush on someone here', he:'סביר שהם דלוקים בסתר על מישהו כאן'},
+      {en:'kiss a stranger on a night out', he:'סביר שיתנשקו עם זר בבילוי'},
+      {en:'have a wild story their parents don’t know', he:'סביר שיש להם סיפור פרוע שההורים לא יודעים עליו'},
+      {en:'flirt their way out of trouble', he:'יודעים לפלרטט את עצמם מחוץ לצרות'},
+      {en:'go home with someone they just met', he:'סביר שילכו הביתה עם מישהו שהכירו הרגע'},
+      {en:'have the most chaotic dating history', he:'סביר שיש להם היסטוריית דייטים הכי מבולגנת'},
+      {en:'get caught sneaking out', he:'סביר שייתפסו מתגנבים החוצה'},
+      {en:'skinny-dip on holiday', he:'סביר שישחו בעירום בחופשה'},
+      {en:'accidentally date two people at once', he:'סביר שיצאו עם שניים בו-זמנית בטעות'},
+      {en:'have a hidden dating app on their phone', he:'סביר שמחביאים אפליקציית היכרויות בטלפון'},
+      {en:'give someone a fake number', he:'סביר שייתנו למישהו מספר מזויף'},
+      {en:'get back with an ex… again', he:'סביר שיחזרו לאקס… שוב'},
+      {en:'always make the first move', he:'תמיד עושים את הצעד הראשון'},
+      {en:'have a one-night story they’d repeat', he:'סביר שיש להם סיפור של לילה אחד ששווה חזרה'},
+      {en:'keep receipts on everyone they dated', he:'סביר ששומרים חשבון על כל מי שיצאו איתו'},
+      {en:'be someone’s bad decision at 3am', he:'סביר שיהיו ההחלטה הגרועה של מישהו ב-3 לפנות בוקר'},
+      {en:'start drama in the group chat', he:'סביר שיפתחו דרמה בקבוצה'},
+      {en:'have a secret they’d take to the grave', he:'סביר שיש להם סוד שייקחו איתם לקבר'},
+      {en:'brag about the wildest thing they did', he:'סביר שיתרברבו בדבר הכי פרוע שעשו'},
+      {en:'fall for someone totally wrong for them', he:'סביר שיתאהבו במישהו ממש לא מתאים'},
+      {en:'text “you up?” first', he:'סביר שישלחו "ער?" ראשונים'},
+      {en:'have a crush on a friend’s ex', he:'סביר שהם דלוקים על האקס של חבר'},
+      {en:'be the reason for a “we need to talk”', he:'סביר שיהיו הסיבה ל"אנחנו צריכים לדבר"'},
+      {en:'get a tattoo they can’t show grandma', he:'סביר שיעשו קעקוע שאי אפשר להראות לסבתא'},
+      {en:'kiss and tell', he:'סביר שיתנשקו ואז יספרו לכולם'},
+      {en:'surprise everyone with their answer', he:'סביר שיפתיעו את כולם עם התשובה שלהם'},
+      {en:'sneak someone out before breakfast', he:'סביר שיבריחו מישהו החוצה לפני ארוחת בוקר'},
+      {en:'get caught mid-lie by a partner', he:'סביר שייתפסו באמצע שקר על ידי בן/בת זוג'},
+      {en:'be in a situationship right now', he:'סביר שהם בקטע לא מוגדר ממש עכשיו'},
+      {en:'slide into someone\'s DMs at 2am', he:'סביר שיחליקו למישהו להודעות בשתיים בלילה'},
+      {en:'date someone just for the free dinner', he:'סביר שיצאו לדייט רק בשביל ארוחה חינם'},
+      {en:'leave a party with a stranger\'s number', he:'סביר שיעזבו מסיבה עם מספר של זר'},
+      {en:'match with their boss on a dating app', he:'מביך כשעושים מאץ עם הבוס באפליקציית היכרויות'},
+      {en:'flirt with the waiter for a discount', he:'יודעים לפלרטט עם המלצר בשביל הנחה'},
+      {en:'keep a drawer of stuff exes left behind', he:'סביר שיש להם מגירה של דברים שאקסים השאירו'},
+      {en:'text three people goodnight at once', he:'סביר שישלחו לילה טוב לשלושה אנשים במקביל'},
+      {en:'get caught staring at someone across the bar', he:'מביך כשתופסים אותם בוהים במישהו מעבר לבר'},
+      {en:'have a type that never ends well', he:'סביר שיש להם טיפוס שאף פעם לא נגמר טוב'},
+      {en:'confess a crush after two drinks', he:'סביר שיודו בקראש אחרי שתי כוסות'},
+      {en:'swipe right on everyone just to feel wanted', he:'סביר שיעשו לייק לכולם רק כדי להרגיש רצויים'},
+      {en:'dance on a table before midnight', he:'סביר שירקדו על שולחן לפני חצות'},
+      {en:'ghost someone and then like their photo', he:'סביר שייעלמו למישהו ואז יעשו לייק לתמונה שלו'},
+      {en:'have a whole story about a holiday romance', he:'סביר שיש להם סיפור שלם על רומן בחופשה'},
+      {en:'steal a kiss under the fireworks', he:'סביר שיגנבו נשיקה מתחת לזיקוקים'},
+      {en:'keep flirting with an ex just for fun', he:'תמיד ממשיכים לפלרטט עם אקס סתם בשביל הכיף'},
+      {en:'pretend to be single on vacation', he:'סביר שיעמידו פנים שהם רווקים בחופשה'},
+      {en:'get a phone number written on their hand', he:'סביר שיקבלו מספר טלפון כתוב על היד'},
+      {en:'start a fling with someone from work', he:'סביר שיתחילו רומן עם מישהו מהעבודה'},
+      {en:'reread old flirty messages when bored', he:'סביר שיקראו מחדש הודעות פלרטוט ישנות כשמשועממים'},
+      {en:'wear something scandalous just to see reactions', he:'סביר שילבשו משהו שערורייתי רק כדי לראות תגובות'},
+      {en:'fall in love on the dance floor', he:'סביר שיתאהבו על רחבת הריקודים'},
+      {en:'get caught with two dates in the same week', he:'מביך כשתופסים אותם עם שני דייטים באותו שבוע'},
+      {en:'kiss someone to win a dare', he:'סביר שיתנשקו עם מישהו כדי לנצח באתגר'},
+      {en:'keep their ex\'s hoodie forever', he:'סביר שישמרו את הקפוצון של האקס לנצח'},
+      {en:'flirt in a language they don\'t even speak', he:'יודעים לפלרטט בשפה שהם בכלל לא מדברים'},
+      {en:'send a photo they immediately unsend', he:'סביר שישלחו תמונה שמיד מבטלים'},
+      {en:'have a crush on someone way too young or old', he:'סביר שיש להם קראש על מישהו צעיר או מבוגר מדי'},
+      {en:'turn a coffee date into a weekend', he:'יודעים להפוך דייט קפה לסוף שבוע שלם'},
+      {en:'get recognized by a bartender who knows too much', he:'מביך כשברמן שיודע יותר מדי מזהה אותם'},
+      {en:'make out in the back of a taxi', he:'סביר שיתמזמזו במושב האחורי של מונית'},
+      {en:'have three dating apps running at once', he:'סביר שיש להם שלוש אפליקציות היכרויות בו זמנית'},
+      {en:'cry over someone they dated for a week', he:'סביר שיבכו על מישהו שיצאו איתו שבוע'},
+      {en:'sneak a peek at a partner\'s phone', he:'סביר שיציצו בטלפון של בן הזוג'},
+      {en:'propose a wild plan at last call', he:'סביר שיציעו תוכנית פרועה בהזמנה האחרונה בבר'},
+      {en:'keep score of who texted first', he:'תמיד סופרים מי שלח הודעה קודם'},
+      {en:'date someone just to annoy their family', he:'סביר שיצאו עם מישהו רק כדי להרגיז את המשפחה'},
+      {en:'get a crush after one good playlist', he:'סביר שיפתחו קראש אחרי פלייליסט אחד טוב'},
+      {en:'leave a club barefoot with a story to tell', he:'סביר שיעזבו מועדון יחפים עם סיפור לספר'},
+      {en:'flirt with someone\'s older sibling', he:'סביר שיפלרטטו עם האח או האחות הגדולים של מישהו'},
+      {en:'keep an ex on speed dial just in case', he:'סביר שישמרו אקס בחיוג מהיר ליתר ביטחון'},
+      {en:'get caught singing love songs at karaoke', he:'מביך כשתופסים אותם שרים שירי אהבה בקריוקי'},
+      {en:'start dating someone from the group chat', he:'סביר שיתחילו לצאת עם מישהו מקבוצת הוואטסאפ'},
+      {en:'have a secret nickname for every crush', he:'סביר שיש להם כינוי סודי לכל קראש'},
+      {en:'accept a dare to text their crush right now', he:'סביר שיקבלו אתגר לשלוח הודעה לקראש עכשיו'},
+      {en:'wink at a stranger and walk away', he:'סביר שיקרצו לזר וימשיכו הלאה'},
+      {en:'get a spontaneous tattoo after a breakup', he:'סביר שיעשו קעקוע ספונטני אחרי פרידה'},
+      {en:'fall for the most unavailable person in the room', he:'סביר שיתאהבו באדם הכי לא זמין בחדר'},
+      {en:'turn every night out into a wild story', he:'יודעים להפוך כל בילוי לסיפור פרוע'},
+      {en:'flirt with the DJ for one more song', he:'יודעים לפלרטט עם התקליטן בשביל עוד שיר אחד'},
+      {en:'have a burner account to stalk an ex', he:'סביר שיש להם חשבון סמוי כדי לעקוב אחרי אקס'},
+      {en:'date someone whose name they can\'t pronounce', he:'סביר שיצאו עם מישהו ששמו לא ניתן להגייה'},
+      {en:'get walked home by someone they just met', he:'סביר שילוו אותם הביתה על ידי מישהו שרק פגשו'},
+      {en:'keep a list of everyone they\'ve kissed', he:'סביר שיש להם רשימה של כל מי שהתנשקו איתו'},
+      {en:'text an ex the second they see a couple', he:'סביר שישלחו לאקס הודעה ברגע שרואים זוג'},
+      {en:'make a scene when their crush walks in', he:'סביר שיעשו סצנה כשהקראש נכנס'},
+      {en:'double book two dates on the same night', he:'סביר שיקבעו שני דייטים לאותו הערב'},
+      {en:'flirt with someone to skip the line', he:'יודעים לפלרטט עם מישהו כדי לדלג על התור'},
+      {en:'get a love letter and never reply', he:'סביר שיקבלו מכתב אהבה ולעולם לא יענו'},
+      {en:'fall asleep on a first date', he:'מביך כשנרדמים באמצע דייט ראשון'},
+      {en:'kiss someone on a dare and catch feelings', he:'סביר שיתנשקו באתגר ויתפסו רגשות'},
+      {en:'have a reputation that arrives before they do', he:'סביר שיש להם מוניטין שמגיע לפניהם'},
+      {en:'date someone just to make an ex jealous', he:'סביר שיצאו עם מישהו רק כדי לעורר קנאה באקס'},
+      {en:'get caught blushing at a compliment', he:'מביך כשתופסים אותם מסמיקים ממחמאה'},
+      {en:'keep flirting even when it\'s clearly awkward', he:'תמיד ממשיכים לפלרטט גם כשזה מביך לחלוטין'},
+      {en:'have a crush on two friends at once', he:'סביר שיש להם קראש על שני חברים בו זמנית'},
+      {en:'leave a date to meet someone hotter', he:'סביר שיעזבו דייט כדי לפגוש מישהו יותר לוהט'},
+      {en:'send a voice note they instantly regret', he:'סביר שישלחו הודעה קולית שמיד מתחרטים עליה'},
+      {en:'flirt their way into a VIP section', he:'יודעים לפלרטט את הדרך שלהם לאזור הוי איי פי'},
+      {en:'get a crush on their gym instructor', he:'סביר שיפתחו קראש על המדריך בחדר כושר'},
+      {en:'dance with a stranger all night and never get their name', he:'סביר שירקדו עם זר כל הלילה בלי לדעת את שמו'},
+      {en:'reply to an ex\'s story within seconds', he:'סביר שיגיבו לסטורי של אקס תוך שניות'},
+      {en:'have a secret playlist for someone', he:'סביר שיש להם פלייליסט סודי בשביל מישהו'},
+      {en:'get caught practicing what to say to a crush', he:'מביך כשתופסים אותם מתאמנים מה להגיד לקראש'},
+      {en:'turn a wrong number into a date', he:'יודעים להפוך טעות במספר לדייט'},
+      {en:'kiss someone at every wedding they attend', he:'סביר שיתנשקו עם מישהו בכל חתונה שהם מגיעים אליה'},
+      {en:'brag about a celebrity who slid into their DMs', he:'סביר שיתפארו בסלב שהחליק להם להודעות'},
+      {en:'date within the friend group and cause chaos', he:'סביר שיצאו בתוך חבורת החברים ויגרמו לבלגן'},
+      {en:'flirt with someone and forget they have a partner', he:'סביר שיפלרטטו עם מישהו וישכחו שיש לו בן זוג'},
+      {en:'sneak back to a hotel room barefoot', he:'סביר שיתגנבו בחזרה לחדר במלון יחפים'},
+      {en:'have a folder of screenshots from every date', he:'סביר שיש להם תיקייה של צילומי מסך מכל דייט'},
+      {en:'get a crush after locking eyes on the subway', he:'סביר שיפתחו קראש אחרי מבט אחד ברכבת'},
+      {en:'leave a voicemail confessing everything', he:'סביר שישאירו הודעה קולית שמתוודה על הכל'},
+      {en:'flirt with two people at the same table', he:'יודעים לפלרטט עם שני אנשים באותו שולחן'},
+      {en:'keep a secret admirer guessing for months', he:'יודעים להשאיר מעריץ סודי בסימני שאלה חודשים'},
+      {en:'get a crush on the person they argue with most', he:'סביר שיפתחו קראש על מי שהם הכי מתווכחים איתו'},
+      {en:'wear last night\'s clothes to brunch', he:'מביך כשמגיעים לבראנץ עם הבגדים של אתמול בלילה'},
+      {en:'text back only when they want something', he:'תמיד עונים רק כשהם רוצים משהו'},
+      {en:'fall for a bartender they\'ll never see again', he:'סביר שיתאהבו בברמן שלעולם לא יראו שוב'},
+      {en:'get caught rehearsing a breakup speech', he:'מביך כשתופסים אותם מתאמנים על נאום פרידה'},
+      {en:'start a rumor about their own love life', he:'סביר שיפיצו שמועה על חיי האהבה של עצמם'},
+      {en:'date someone for the aesthetic of their apartment', he:'סביר שיצאו עם מישהו בגלל האסתטיקה של הדירה שלו'},
+      {en:'flirt with everyone except the one they like', he:'סביר שיפלרטטו עם כולם חוץ ממי שהם באמת רוצים'},
+      {en:'have a crush and deny it to everyone', he:'סביר שיהיה להם קראש ויכחישו את זה בפני כולם'},
+      {en:'get a love confession at the worst possible time', he:'מביך כשמקבלים הצהרת אהבה בזמן הכי גרוע'},
+      {en:'kiss someone on a rooftop at sunrise', he:'סביר שיתנשקו על גג בזריחה'},
+      {en:'keep a spare outfit for a spontaneous sleepover', he:'סביר שיש להם חליפת חילוף לשינה ספונטנית'},
+      {en:'flirt so hard they forget their own name', he:'סביר שיפלרטטו כל כך חזק ששוכחים את שמם'},
+      {en:'get caught replaying a first-kiss moment in their head', he:'מביך כשתופסים אותם משחזרים בראש רגע של נשיקה ראשונה'},
+      {en:'turn a breakup into a glow-up overnight', he:'יודעים להפוך פרידה לשדרוג בן לילה'}
+    ]},
+  work:{ emoji:'💼', name:{en:'Office',he:'משרד'}, tag:{en:'Team-building friendly',he:'ידידותי לגיבוש צוות'},
+    q:[
+      {en:'reply to a long message with just “👍”', he:'סביר שיענו להודעה ארוכה רק עם "👍"'},
+      {en:'talk for a full minute on mute', he:'סביר שידברו דקה שלמה כשהם על השתקה'},
+      {en:'have 47 browser tabs open right now', he:'סביר שיש להם 47 טאבים פתוחים ממש עכשיו'},
+      {en:'send an email and forget the attachment', he:'סביר שישלחו מייל וישכחו את הקובץ המצורף'},
+      {en:'take credit for a team idea', he:'סביר שייקחו קרדיט על רעיון של הצוות'},
+      {en:'schedule a meeting that could’ve been an email', he:'סביר שיקבעו פגישה שיכלה להיות מייל'},
+      {en:'be on their phone during standup', he:'סביר שיהיו בטלפון באמצע הישיבה'},
+      {en:'eat the last snack in the kitchen', he:'סביר שיאכלו את החטיף האחרון במטבחון'},
+      {en:'have the messiest desk', he:'סביר שיהיה להם השולחן הכי מבולגן'},
+      {en:'hit reply-all by accident', he:'סביר שילחצו "השב לכולם" בטעות'},
+      {en:'become the boss one day', he:'סביר שיהפכו לבוס יום אחד'},
+      {en:'work through their lunch break', he:'סביר שיעבדו דרך הפסקת הצהריים'},
+      {en:'fall asleep in a Monday meeting', he:'סביר שיירדמו בישיבה של יום ראשון'},
+      {en:'start a side hustle', he:'סביר שיפתחו עסק צדדי'},
+      {en:'know all the office gossip', he:'יודעים את כל הרכילות במשרד'},
+      {en:'leave a passive-aggressive fridge note', he:'סביר שישאירו פתק פסיבי-אגרסיבי על המקרר'},
+      {en:'say “let’s take this offline”', he:'סביר שיגידו "בוא נמשיך את זה אחר כך"'},
+      {en:'arrive last to every meeting', he:'סביר שיגיעו אחרונים לכל ישיבה'},
+      {en:'have the most unread emails', he:'סביר שיש להם הכי הרבה מיילים לא נקראים'},
+      {en:'quit dramatically one day', he:'סביר שיתפטרו בדרמה יום אחד'},
+      {en:'win employee of the month', he:'סביר שיזכו בעובד החודש'},
+      {en:'microwave fish in the office kitchen', he:'סביר שיחממו דג במיקרוגל במשרד'},
+      {en:'forget to unmute and keep talking', he:'סביר שישכחו לבטל השתקה וימשיכו לדבר'},
+      {en:'get caught online-shopping at their desk', he:'סביר שייתפסו קונים אונליין ליד השולחן'},
+      {en:'volunteer for the office party committee', he:'סביר שיתנדבו לוועדת המסיבות של המשרד'},
+      {en:'send a “per my last email”', he:'סביר שישלחו "כפי שכתבתי במייל הקודם"'},
+      {en:'have the best fake “thinking” face on camera', he:'סביר שיש להם פרצוף ה"חושב" הכי משכנע במצלמה'},
+      {en:'turn the camera off to eat', he:'סביר שיכבו מצלמה כדי לאכול'},
+      {en:'actually read the employee handbook', he:'סביר שבאמת יקראו את נהלי החברה'},
+      {en:'survive the longest at the company', he:'סביר שישרדו הכי הרבה זמן בחברה'},
+      {en:'join a Zoom call two minutes late every single time', he:'סביר שיצטרפו לזום שתי דקות באיחור בכל פעם מחדש'},
+      {en:'say we should circle back and never circle back', he:'סביר שיגידו שנחזור לזה ואף פעם לא יחזרו לזה'},
+      {en:'have a virtual background hiding a total mess', he:'סביר שיסתירו בלגן שלם מאחורי רקע וירטואלי בזום'},
+      {en:'ask a question that adds ten minutes to the meeting', he:'סביר שישאלו שאלה שמוסיפה עשר דקות לישיבה'},
+      {en:'reply to an email within nine seconds', he:'סביר שיענו למייל תוך תשע שניות'},
+      {en:'keep a coffee mug from 2019 on their desk', he:'יש להם ספל קפה על השולחן מ2019'},
+      {en:'say happy Monday with way too much energy', he:'סביר שיאמרו יום שני שמח עם יותר מדי אנרגיה'},
+      {en:'type a whole paragraph and then delete it in Slack', he:'סביר שיכתבו פסקה שלמה בסלאק ואז ימחקו הכל'},
+      {en:'bring a laptop to a meeting that needs no laptop', he:'סביר שיביאו לפטופ לישיבה שלא צריכה לפטופ בכלל'},
+      {en:'have back-to-back meetings with no bathroom break', he:'סביר שיהיו להם ישיבות רצופות בלי הפסקה לשירותים'},
+      {en:'steal someone else\'s lunch from the fridge', he:'סביר שיגנבו למישהו את הצהריים מהמקרר'},
+      {en:'block their calendar just to get some work done', he:'סביר שיחסמו את היומן רק כדי להספיק לעבוד'},
+      {en:'cry in the office bathroom and come out smiling', he:'מביך כשבוכים בשירותים במשרד ויוצאים עם חיוך'},
+      {en:'explain a simple thing with an unnecessary flowchart', he:'סביר שיסבירו דבר פשוט עם תרשים זרימה מיותר'},
+      {en:'send just okay as a full reply to a big update', he:'סביר שיענו רק בסבבה לעדכון ענק וחשוב'},
+      {en:'have the loudest keyboard in the entire office', he:'יש להם את המקלדת הכי רועשת בכל המשרד'},
+      {en:'put a meeting on the calendar for 8 am on a Friday', he:'סביר שיקבעו ישיבה לשמונה בבוקר ביום שישי'},
+      {en:'say I have a hard stop and then keep talking', he:'סביר שיגידו שחייבים לסיים בזמן וימשיכו לדבר'},
+      {en:'bring homemade snacks and win everyone over', he:'סביר שיביאו חטיפים מהבית ויקנו את כולם'},
+      {en:'forget which meeting they are even in', he:'סביר שישכחו באיזו ישיבה הם בכלל נמצאים'},
+      {en:'reorganize the shared drive without telling anyone', he:'סביר שיסדרו מחדש את הדרייב המשותף בלי לספר לאף אחד'},
+      {en:'answer a Slack message at 11 pm', he:'סביר שיענו להודעה בסלאק באחת עשרה בלילה'},
+      {en:'have too many post-it notes stuck to their monitor', he:'יש להם יותר מדי פתקים דביקים על המסך'},
+      {en:'use three exclamation marks in a work email', he:'סביר שישתמשו בשלושה סימני קריאה במייל עבודה'},
+      {en:'start a poll in the team chat about lunch', he:'סביר שיפתחו סקר בצאט הצוותי על אוכל צהריים'},
+      {en:'print something and forget it at the printer', he:'סביר שידפיסו משהו וישכחו אותו במדפסת'},
+      {en:'say quick question before a very long question', he:'סביר שיגידו שאלה קצרה לפני שאלה מאוד ארוכה'},
+      {en:'reply to a meeting invite with maybe forever', he:'סביר שיסמנו אולי בהזמנה לישיבה לתמיד'},
+      {en:'keep the whole team waiting on the shared doc', he:'סביר שיעכבו את כל הצוות על המסמך המשותף'},
+      {en:'add way too many people to an email thread', he:'סביר שיוסיפו יותר מדי אנשים לשרשור מיילים'},
+      {en:'turn every chat into a video call', he:'סביר שיהפכו כל צאט לשיחת וידאו'},
+      {en:'eat lunch at their desk while on mute', he:'סביר שיאכלו צהריים ליד השולחן כשהם על מיוט'},
+      {en:'leave dishes in the office sink for a week', he:'סביר שישאירו כלים בכיור במטבחון שבוע שלם'},
+      {en:'have a hot take about the new office layout', he:'יש להם דעה חמה על העיצוב החדש של המשרד'},
+      {en:'say per my calendar in a passive-aggressive way', he:'סביר שיגידו לפי היומן שלי בטון פסיבי אגרסיבי'},
+      {en:'ghost a thread and reappear when it is done', he:'סביר שייעלמו משרשור ויחזרו רק כשהוא נגמר'},
+      {en:'adjust the office thermostat for everyone', he:'סביר שישנו את המזגן במשרד בשביל כולם'},
+      {en:'get lost on the way to a conference room', he:'סביר שילכו לאיבוד בדרך לחדר ישיבות'},
+      {en:'reply all to say thanks to fifty people', he:'מביך כשעונים לכולם תודה מול חמישים אנשים'},
+      {en:'have their status stuck on away for three days', he:'סביר שהסטטוס שלהם ייתקע על מרוחקים שלושה ימים'},
+      {en:'bring up a new idea five minutes before the end', he:'סביר שיעלו רעיון חדש חמש דקות לפני סוף הישיבה'},
+      {en:'sign every message with a random inspirational quote', he:'סביר שיחתמו כל הודעה עם ציטוט השראה אקראי'},
+      {en:'forget to leave a video call and keep sitting there', he:'סביר שישכחו לצאת משיחת וידאו וישבו שם בהיי'},
+      {en:'make small talk in the elevator for four floors', he:'סביר שיעשו סמול טוק במעלית ארבע קומות שלמות'},
+      {en:'have a mystery container in the office fridge', he:'יש להם קופסה מסתורית במקרר של המשרד'},
+      {en:'double book themselves and pick the wrong meeting', he:'סביר שיקבעו שתי ישיבות במקביל ויבחרו את הלא נכונה'},
+      {en:'ask if we are being recorded on every call', he:'סביר שישאלו אם מקליטים אותנו בכל שיחה'},
+      {en:'send a good morning gif to the whole channel', he:'סביר שישלחו גיף של בוקר טוב לכל הערוץ'},
+      {en:'spend an hour picking the perfect Slack emoji', he:'סביר שיבזבזו שעה על בחירת האימוג׳י המושלם בסלאק'},
+      {en:'still use a paper planner in 2026', he:'סביר שעדיין ישתמשו במחברת נייר בשנת אלפיים עשרים ושש'},
+      {en:'say this will only take five minutes and lie', he:'סביר שיגידו שזה ייקח רק חמש דקות וישקרו'},
+      {en:'have opinions about the office plant care', he:'יש להם דעות על הטיפול בעציצים במשרד'},
+      {en:'reply to a two-day-old message like it is urgent', he:'סביר שיענו להודעה מלפני יומיים כאילו זה דחוף'},
+      {en:'wear headphones to avoid a hallway conversation', he:'סביר שישימו אוזניות כדי להימנע משיחה במסדרון'},
+      {en:'book the good conference room for a solo call', he:'סביר שיזמינו את חדר הישיבות הטוב לשיחה לבד'},
+      {en:'keep saying can everyone see my screen', he:'סביר שימשיכו לשאול אם כולם רואים את המסך שלהם'},
+      {en:'start typing a reply and forget to hit send', he:'סביר שיתחילו לכתוב תשובה וישכחו ללחוץ שלח'},
+      {en:'have three monitors and use only one', he:'יש להם שלושה מסכים והם משתמשים רק באחד'},
+      {en:'bring up their weekend plans in a status update', he:'סביר שיספרו על תוכניות הסופש שלהם בעדכון סטטוס'},
+      {en:'leave the meeting camera on while walking around', he:'סביר שישאירו את המצלמה דלוקה בזמן שהם מסתובבים'},
+      {en:'ask for the deck ten minutes before the meeting', he:'סביר שיבקשו את המצגת עשר דקות לפני הישיבה'},
+      {en:'reply with a voice message that is four minutes long', he:'סביר שישלחו הודעה קולית של ארבע דקות'},
+      {en:'keep the office snack drawer secretly stocked', he:'סביר שיחזיקו מגירת חטיפים סודית ומלאה במשרד'},
+      {en:'schedule a recurring meeting no one attends', he:'סביר שיקבעו ישיבה קבועה שאף אחד לא מגיע אליה'},
+      {en:'say I think we lost them when someone freezes', he:'סביר שיגידו נראה שאיבדנו אותם כשמישהו נתקע בזום'},
+      {en:'have every notification sound turned on full volume', he:'יש להם את כל צלילי ההתראות בעוצמה מקסימלית'},
+      {en:'start a spreadsheet for something that needs no spreadsheet', he:'סביר שיפתחו טבלת אקסל לדבר שלא צריך אקסל בכלל'},
+      {en:'give a coworker a nickname that sticks forever', he:'סביר שיתנו לעמית כינוי שנדבק אליו לתמיד'},
+      {en:'hoard all the good pens from the supply closet', he:'סביר שיאגרו את כל העטים הטובים מארון הציוד'},
+      {en:'read the whole email chain aloud in the meeting', he:'סביר שיקראו בקול את כל שרשור המיילים בישיבה'},
+      {en:'keep their video off and claim bad wifi', he:'סביר שישאירו את המצלמה כבויה ויטענו שהאינטרנט חלש'},
+      {en:'become best friends with the office cleaning crew', he:'סביר שיהפכו לחברים הכי טובים של צוות הניקיון'},
+      {en:'send a meeting recap longer than the meeting', he:'סביר שישלחו סיכום ישיבה ארוך יותר מהישיבה עצמה'},
+      {en:'clap when someone finally fixes the printer', he:'סביר שימחאו כפיים כשמישהו סוף סוף מתקן את המדפסת'},
+      {en:'answer a call from the parking lot to seem busy', he:'סביר שיענו לשיחה מהחניה כדי להיראות עסוקים'},
+      {en:'insist on a team building day no one asked for', he:'סביר שיתעקשו על יום גיבוש שאף אחד לא ביקש'},
+      {en:'reply looks good without reading the document', he:'סביר שיענו נראה מעולה בלי לקרוא את המסמך'},
+      {en:'keep asking when is the next coffee break', he:'סביר שימשיכו לשאול מתי הפסקת הקפה הבאה'},
+      {en:'leave their laptop unlocked and get prank emailed', he:'מביך כשמשאירים לפטופ פתוח ושולחים מהם מייל מתיחה'},
+      {en:'join the wrong Zoom link and stay for ten minutes', he:'סביר שיצטרפו ללינק זום הלא נכון ויישארו עשר דקות'},
+      {en:'start every sentence with just to add on to that', he:'סביר שיתחילו כל משפט ברק להוסיף על מה שנאמר'},
+      {en:'have a walking meeting and lose everyone', he:'סביר שיעשו ישיבה בהליכה ויאבדו את כולם בדרך'},
+      {en:'reply to a calendar invite with a whole essay', he:'סביר שיענו להזמנה ליומן עם חיבור שלם'},
+      {en:'keep a secret stash of the good office coffee', he:'סביר שיחביאו מלאי סודי של הקפה הטוב במשרד'},
+      {en:'unmute just to sigh loudly', he:'סביר שיורידו מיוט רק כדי להיאנח בקול'},
+      {en:'forget everyone\'s name at the company party', he:'סביר שישכחו את השמות של כולם במסיבת החברה'},
+      {en:'take a personal call on speaker at their desk', he:'מביך כשעונים לשיחה אישית ברמקול ליד השולחן'},
+      {en:'reschedule the same meeting four times', he:'סביר שידחו את אותה ישיבה ארבע פעמים'},
+      {en:'bring up an inside joke in a serious meeting', he:'סביר שיעלו בדיחה פנימית באמצע ישיבה רצינית'},
+      {en:'have the most complicated email signature', he:'יש להם את חתימת המייל הכי מסובכת'},
+      {en:'keep declining meetings until their day is empty', he:'סביר שידחו ישיבות עד שהיום שלהם ריק לגמרי'},
+      {en:'wave goodbye on camera for way too long', he:'מביך כשמנופפים לשלום במצלמה יותר מדי זמן'},
+      {en:'assign an action item to someone who already left', he:'סביר שיתנו משימה למישהו שכבר עזב את החברה'},
+      {en:'narrate their own screen share too slowly', he:'סביר שיתארו את שיתוף המסך שלהם לאט מדי'},
+      {en:'start a heated debate about the office music', he:'סביר שיתחילו ויכוח סוער על המוזיקה במשרד'},
+      {en:'say I will keep this brief and speak for twenty minutes', he:'סביר שיגידו אקצר וידברו עשרים דקות'},
+      {en:'guard the last slice of birthday cake', he:'סביר שישמרו על החתיכה האחרונה של עוגת יום ההולדת'},
+      {en:'screenshot a Slack message to send it to another Slack', he:'סביר שיצלמו מסך של הודעת סלאק כדי לשלוח לסלאק אחר'},
+      {en:'keep their to-do list on a hundred sticky notes', he:'סביר שיחזיקו את רשימת המשימות על מאה פתקים דביקים'},
+      {en:'show up to the office on the one work-from-home day', he:'סביר שיגיעו למשרד ביום היחיד של עבודה מהבית'}
+    ]}
+};
+/* claymorphic pack/mode icons */
+const ICONS = {};
+ICONS.party = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<radialGradient id="pA" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#ffd38a"/><stop offset="55%" stop-color="#ff9d5c"/><stop offset="100%" stop-color="#ef6f3c"/></radialGradient>
+<radialGradient id="pB" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#ffb3d1"/><stop offset="55%" stop-color="#ff6fa8"/><stop offset="100%" stop-color="#e23f86"/></radialGradient>
+<radialGradient id="pC" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#bfe0ff"/><stop offset="55%" stop-color="#6ea8ff"/><stop offset="100%" stop-color="#3f6fe0"/></radialGradient></defs>
+<ellipse cx="50" cy="90" rx="30" ry="6" fill="rgba(0,0,0,.25)"/>
+<g><circle cx="26" cy="40" r="12" fill="url(#pC)"/><path d="M10 82 Q10 60 26 60 Q42 60 42 82 Z" fill="url(#pC)"/></g>
+<g><circle cx="74" cy="40" r="12" fill="url(#pA)"/><path d="M58 82 Q58 60 74 60 Q90 60 90 82 Z" fill="url(#pA)"/></g>
+<g><circle cx="50" cy="34" r="15" fill="url(#pB)"/><path d="M30 86 Q30 58 50 58 Q70 58 70 86 Z" fill="url(#pB)"/><ellipse cx="45" cy="28" rx="5" ry="6.5" fill="rgba(255,255,255,.6)"/></g></svg>`;
+ICONS.family = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<radialGradient id="tBody" cx="38%" cy="30%" r="80%"><stop offset="0%" stop-color="#e6b483"/><stop offset="55%" stop-color="#c88c53"/><stop offset="100%" stop-color="#9c6534"/></radialGradient>
+<radialGradient id="tMuz" cx="40%" cy="35%" r="80%"><stop offset="0%" stop-color="#ffe6c7"/><stop offset="100%" stop-color="#f0c79a"/></radialGradient></defs>
+<ellipse cx="50" cy="92" rx="28" ry="5" fill="rgba(0,0,0,.25)"/>
+<circle cx="26" cy="30" r="14" fill="url(#tBody)"/><circle cx="74" cy="30" r="14" fill="url(#tBody)"/>
+<circle cx="50" cy="52" r="34" fill="url(#tBody)"/><ellipse cx="38" cy="34" rx="9" ry="11" fill="rgba(255,255,255,.4)"/>
+<ellipse cx="50" cy="62" rx="18" ry="15" fill="url(#tMuz)"/>
+<circle cx="40" cy="47" r="4.5" fill="#2b1c10"/><circle cx="60" cy="47" r="4.5" fill="#2b1c10"/>
+<ellipse cx="50" cy="56" rx="5" ry="4" fill="#3a2415"/>
+<path d="M50 60 Q44 68 38 64 M50 60 Q56 68 62 64" stroke="#3a2415" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+ICONS.spicy = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<linearGradient id="chili" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#ff6b5e"/><stop offset="45%" stop-color="#ec2a2a"/><stop offset="100%" stop-color="#a80f1e"/></linearGradient>
+<linearGradient id="stem" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8fe36a"/><stop offset="100%" stop-color="#3f9c3a"/></linearGradient></defs>
+<ellipse cx="52" cy="90" rx="26" ry="5" fill="rgba(0,0,0,.25)"/>
+<path d="M30 26 Q34 18 44 22" stroke="url(#stem)" stroke-width="7" fill="none" stroke-linecap="round"/>
+<path d="M40 24 C64 20 82 34 80 56 C78 78 58 90 40 84 C24 79 20 62 28 50 C34 40 36 30 40 24 Z" fill="url(#chili)"/>
+<path d="M46 30 C60 30 70 42 70 56 C70 68 60 78 50 78" stroke="rgba(255,255,255,.5)" stroke-width="5" fill="none" stroke-linecap="round"/></svg>`;
+ICONS.work = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<linearGradient id="wcase" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e3c37e"/><stop offset="100%" stop-color="#b98f45"/></linearGradient>
+<linearGradient id="wcaseTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d495"/><stop offset="100%" stop-color="#cda85a"/></linearGradient></defs>
+<ellipse cx="50" cy="90" rx="30" ry="5" fill="rgba(0,0,0,.25)"/>
+<path d="M40 26 Q40 18 50 18 Q60 18 60 26 L60 34 L54 34 L54 27 Q54 24 50 24 Q46 24 46 27 L46 34 L40 34 Z" fill="#efe6d0"/>
+<rect x="16" y="34" width="68" height="50" rx="12" fill="url(#wcase)"/>
+<rect x="16" y="34" width="68" height="18" rx="12" fill="url(#wcaseTop)"/>
+<rect x="42" y="46" width="16" height="10" rx="3" fill="#8a6a2e"/></svg>`;
+ICONS.win = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe9a0"/><stop offset="45%" stop-color="#ffcb45"/><stop offset="100%" stop-color="#e59a12"/></linearGradient>
+<linearGradient id="goldBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffd766"/><stop offset="100%" stop-color="#d98a10"/></linearGradient></defs>
+<ellipse cx="50" cy="90" rx="28" ry="5" fill="rgba(0,0,0,.28)"/>
+<path d="M18 40 L30 66 L70 66 L82 40 L64 52 L50 30 L36 52 Z" fill="url(#gold)"/>
+<rect x="28" y="64" width="44" height="16" rx="6" fill="url(#goldBase)"/>
+<circle cx="18" cy="40" r="6" fill="#ffe27a"/><circle cx="82" cy="40" r="6" fill="#ffe27a"/><circle cx="50" cy="28" r="6.5" fill="#ffe9a0"/>
+<circle cx="38" cy="72" r="4" fill="#f3a6c0"/><circle cx="50" cy="72" r="4" fill="#a6c8f3"/><circle cx="62" cy="72" r="4" fill="#a6e3d0"/></svg>`;
+ICONS.lose = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+<radialGradient id="imp" cx="38%" cy="30%" r="78%"><stop offset="0%" stop-color="#c79bff"/><stop offset="55%" stop-color="#9a5cff"/><stop offset="100%" stop-color="#6a2fd6"/></radialGradient></defs>
+<ellipse cx="50" cy="90" rx="26" ry="5" fill="rgba(0,0,0,.25)"/>
+<path d="M24 34 Q20 18 34 22 Q30 30 34 38 Z" fill="url(#imp)"/><path d="M76 34 Q80 18 66 22 Q70 30 66 38 Z" fill="url(#imp)"/>
+<circle cx="50" cy="54" r="30" fill="url(#imp)"/><ellipse cx="40" cy="42" rx="8" ry="9" fill="rgba(255,255,255,.4)"/>
+<path d="M36 50 L48 54 M64 50 L52 54" stroke="#3a1c66" stroke-width="3" stroke-linecap="round"/>
+<circle cx="42" cy="54" r="3.4" fill="#2a0f52"/><circle cx="58" cy="54" r="3.4" fill="#2a0f52"/>
+<path d="M38 66 Q50 78 62 66 Q56 70 50 70 Q44 70 38 66 Z" fill="#2a0f52"/></svg>`;
+
+/* ===================== STATE ===================== */
+const App = {
+  lang:'en', view:'home', room:null, players:[], votes:[], me:null, myVote:null,
+  channel:null, _revealing:false, busy:false,
+  pendingAvatar: 'adventurer:'+AVSEEDS[Math.floor(Math.random()*AVSEEDS.length)],
+  pendingMode:'winner', pendingPack:'party', pendingRounds:8
+};
+const $ = (id)=>document.getElementById(id);
+const app = $('app');
+const esc = (s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),1900); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function genCode(){ const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function qText(pack, idx){ const p=PACKS[pack]; if(!p||idx==null||!p.q[idx]) return ''; return p.q[idx][App.lang]||p.q[idx].en; }
+function packName(k){ return PACKS[k].name[App.lang]||PACKS[k].name.en; }
+function inviteUrl(){ return location.origin+location.pathname+'?room='+App.room.code+'&lang='+App.lang; }
+
+function saveSession(){ try{ localStorage.setItem('wml2', JSON.stringify({roomId:App.room&&App.room.id, playerId:App.me&&App.me.id})); }catch(e){} }
+function clearSession(){ try{ localStorage.removeItem('wml2'); }catch(e){} }
+
+function applyLang(){
+  document.documentElement.lang = App.lang;
+  document.documentElement.dir = App.lang==='he' ? 'rtl' : 'ltr';
+  document.title = App.lang==='he' ? 'מי הכי?' : 'Most Likely — Party Game';
+}
+function setLang(l){ App.lang=l; try{ localStorage.setItem('wml_lang', l); }catch(e){} applyLang(); render(); }
+function langSwitch(){
+  return '<div class="lang">'+
+    '<button class="'+(App.lang==='en'?'on':'')+'" onclick="setLang(\'en\')">EN</button>'+
+    '<button class="'+(App.lang==='he'?'on':'')+'" onclick="setLang(\'he\')">עב</button>'+
+  '</div>';
+}
+
+/* ===================== RENDER ===================== */
+function render(prefill){
+  if(App.view==='home') return renderHome();
+  if(App.view==='create') return renderCreate();
+  if(App.view==='join') return renderJoin(prefill);
+  if(App.view==='room'){
+    const st = App.room && App.room.status;
+    if(st==='lobby') return renderLobby();
+    if(st==='voting') return renderVoting();
+    if(st==='reveal') return renderReveal();
+    if(st==='finished') return renderFinished();
+  }
+  renderHome();
+}
+
+function renderHome(){
+  app.innerHTML = `
+  <div class="screen">
+    <div class="appbar"><span></span>${langSwitch()}</div>
+    <div class="brand">
+      <div class="kicker">${esc(t('kicker'))}</div>
+      ${App.lang==='he'?`<h1><span class="h1gold">מי הכי?</span></h1>`:`<h1>Most<br><span class="h1gold">Likely</span></h1>`}
+      <div class="orbit">🌙 ✦ 👑 ✦ ⭐</div>
+      <div class="sub">${esc(t('mostLikelyTo'))}<br>${esc(t('subtitle'))}</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="stack">
+      <button class="btn gold" onclick="goCreate()">${esc(t('newGame'))}</button>
+      <button class="btn cream" onclick="goJoin()">${esc(t('joinGame'))}</button>
+    </div>
+    <div class="hint mt-l">${esc(t('hint3'))}</div>
+  </div>`;
+}
+
+function renderCreate(){
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar"><button class="pill" onclick="goHome()">${App.lang==='he'?'→':'←'} ${esc(t('back'))}</button>${langSwitch()}<div class="pill">${esc(t('newGameTag'))}</div></div>
+    <h2 class="center" style="font-size:30px">${esc(t('setup'))}</h2>
+    <div class="card mt">
+      <div class="label">${esc(t('yourName'))}</div>
+      <input id="cname" class="field" maxlength="14" placeholder="${esc(t('eg'))}" autocomplete="off" />
+      <div class="label" style="margin-top:16px">${esc(t('pickAvatar'))}</div>
+      <div id="picker">${renderPicker()}</div>
+    </div>
+    <div class="card mt">
+      <div class="label">${esc(t('chooseVibe'))}</div>
+      <div class="chips two">
+        ${Object.entries(PACKS).map(([k,p])=>`<div class="chip ${k===App.pendingPack?'selected':''}" onclick="selectPack('${k}',this)">
+          <div class="badge">${ICONS[k]||''}</div><div class="t">${esc(packName(k))}</div><div class="d">${esc(p.tag[App.lang]||p.tag.en)}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card mt">
+      <div class="label">${esc(t('mostVotes'))}</div>
+      <div class="chips two">
+        <div class="chip ${App.pendingMode==='winner'?'selected':''}" onclick="selectMode('winner',this)">
+          <div class="badge">${ICONS.win}</div><div class="t">${esc(t('win'))}</div><div class="d">${esc(t('winDesc'))}</div></div>
+        <div class="chip ${App.pendingMode==='loser'?'selected':''}" onclick="selectMode('loser',this)">
+          <div class="badge">${ICONS.lose}</div><div class="t">${esc(t('lose'))}</div><div class="d">${esc(t('loseDesc'))}</div></div>
+      </div>
+      <div class="label" style="margin-top:16px">${esc(t('rounds'))}</div>
+      <div class="seg">
+        ${[5,8,12].map(n=>`<div class="chip ${App.pendingRounds===n?'selected':''}" onclick="selectRounds(${n},this)"><div class="n">${n}</div><div class="u">${esc(t('roundsU'))}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="err mt-s" id="cerr"></div>
+    <button class="btn gold mt" id="cbtn" onclick="doCreate()">${esc(t('createGame'))}</button>
+  </div>`;
+  setTimeout(()=>$('cname')&&$('cname').focus(), 250);
+}
+
+function renderJoin(prefill){
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar"><button class="pill" onclick="goHome()">${App.lang==='he'?'→':'←'} ${esc(t('back'))}</button>${langSwitch()}<div class="pill">${esc(t('joinTag'))}</div></div>
+    <h2 class="center" style="font-size:30px">${esc(t('joinParty'))}</h2>
+    <div class="card mt">
+      <div class="label">${esc(t('roomCode'))}</div>
+      <input id="jcode" class="field code-field" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters" value="${esc(prefill||'')}" oninput="this.value=this.value.toUpperCase()" />
+      <div class="label" style="margin-top:16px">${esc(t('yourName'))}</div>
+      <input id="jname" class="field" maxlength="14" placeholder="${esc(t('eg'))}" autocomplete="off" />
+      <div class="label" style="margin-top:16px">${esc(t('pickAvatar'))}</div>
+      <div id="picker">${renderPicker()}</div>
+    </div>
+    <div class="err mt-s" id="jerr"></div>
+    <button class="btn gold mt" id="jbtn" onclick="doJoin()">${esc(t('join'))}</button>
+  </div>`;
+  setTimeout(()=>{ const f=$(prefill?'jname':'jcode'); f&&f.focus(); }, 250);
+}
+
+function renderLobby(){
+  const isHost = App.me && App.me.is_host;
+  const p = PACKS[App.room.pack]||PACKS.party;
+  const enough = App.players.length>=2;
+  const hasHost = App.players.some(x=>x.is_host);
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar">
+      <div class="pill">${p.emoji} <b>${esc(packName(App.room.pack))}</b></div>
+      ${langSwitch()}
+      <div class="pill">${App.room.mode==='winner'?'👑':'😈'} · <b>${App.room.total_rounds}</b></div>
+    </div>
+    <div class="qr-card">
+      <div class="qr-title">${esc(t('scanToJoin'))}</div>
+      <div class="qr-box"><img src="${qrUrl(inviteUrl())}" alt="" onerror="this.parentElement.classList.add('noqr')"/><div class="qr-fallback">${esc(App.room.code)}</div></div>
+      <div class="qr-code">${esc(App.room.code)}</div>
+      <button class="btn ghost sm mt-s" onclick="shareRoom()">${esc(t('share'))}</button>
+    </div>
+    <div class="label mt" style="margin-inline-start:4px">${esc(t('players'))} <b style="color:var(--cream)">(${App.players.length})</b></div>
+    <div class="ppl-grid">
+      ${App.players.map(pl=>`<div class="ppl">
+        <div class="ppl-av ${pl.is_host?'host':''}">${avImg(pl.avatar,'fill')}${pl.is_host?'<span class="crown-badge">👑</span>':''}</div>
+        <div class="ppl-nm">${esc(pl.name)}${pl.id===App.me.id?' · '+esc(t('you')):''}</div>
+      </div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    ${isHost ? `
+      <button class="btn gold" ${enough?'':'disabled'} onclick="startGame()">${enough?esc(t('startGame')):esc(t('waitingPlayers'))}</button>
+      <div class="hint mt-s">${enough?esc(t('allIn')):esc(t('needTwo'))}</div>
+    ` : `
+      <div class="hint mt">${esc(t('waitingHost'))}</div>
+      ${!hasHost?`<button class="link mt-s" style="display:block;margin:8px auto 0" onclick="takeHost()">${esc(t('takeover'))}</button>`:''}
+    `}
+    <button class="btn ghost mt-s" onclick="leaveRoom()">${esc(t('leave'))}</button>
+  </div>`;
+}
+
+function renderVoting(){
+  const q = qText(App.room.pack, App.room.current_question);
+  const voters = new Set(App.votes.map(v=>v.voter_id));
+  const votedCount = voters.size, total = App.players.length;
+  const isHost = App.me && App.me.is_host;
+  const everyone = votedCount>=total && total>0;
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar">
+      <div class="pill">${esc(t('round'))} <b>${App.room.round}</b>/${App.room.total_rounds}</div>
+      ${langSwitch()}
+      <div class="pill">${votedCount}/${total} ${esc(t('lockedIn'))}</div>
+    </div>
+    <div class="q-card"><div class="pre">${esc(t('mostLikelyTo'))}</div><div class="q">${esc(q)}</div></div>
+    <div class="vote-main">
+      <div class="label" style="margin-inline-start:4px">${App.myVote?esc(t('youVoted')):esc(t('tapPick'))}</div>
+      <div class="vote-grid">
+        ${App.players.map(pl=>{
+          const picked = App.myVote===pl.id;
+          return `<div class="vote ${picked?'picked':''}" onclick="castVote('${pl.id}')">
+            <div class="vdisc">${avImg(pl.avatar,'fill')}</div><span class="nm">${esc(pl.name)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="progress-note">${everyone?esc(t('everyoneVoted')):(App.myVote?esc(t('waitingOthers')):esc(t('lockVote')))}</div>
+    </div>
+    ${isHost ? `<button class="btn gold" onclick="revealRound()">${everyone?esc(t('reveal')):esc(t('revealSkip'))}</button>` :
+      `<div class="hint mt-s">${esc(t('hostReveals'))}</div>`}
+  </div>`;
+}
+
+function renderReveal(){
+  const round = App.room.round;
+  const tally = {}; App.players.forEach(p=>tally[p.id]=0);
+  App.votes.forEach(v=>{ if(tally[v.target_id]!=null) tally[v.target_id]++; });
+  const max = Math.max(0,...Object.values(tally));
+  const ranked = [...App.players].sort((a,b)=>tally[b.id]-tally[a.id]);
+  const winners = App.players.filter(p=>tally[p.id]===max && max>0);
+  const isHost = App.me && App.me.is_host;
+  const last = round>=App.room.total_rounds;
+  const lead = [...App.players].sort((a,b)=>b.score-a.score);
+  const vw = (n)=> n===1?t('vote1'):t('votes');
+  let banner='';
+  if(winners.length===1){
+    banner = `<div class="crown-banner"><div class="cav">${avImg(winners[0].avatar,'fill')}</div><div class="who">${esc(winners[0].name)}</div><div class="cap">${max} ${esc(vw(max))} · +${max}</div></div>`;
+  } else if(winners.length>1){
+    banner = `<div class="crown-banner"><div class="who">🤝 ${esc(t('tie'))}</div><div class="cap">${winners.map(w=>esc(w.name)).join(' & ')} · ${max}</div></div>`;
+  } else {
+    banner = `<div class="crown-banner"><div class="who">🦗 ${esc(t('nobodyVoted'))}</div><div class="cap">${esc(t('awkward'))}</div></div>`;
+  }
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar">
+      <div class="pill">${esc(t('round'))} <b>${round}</b>/${App.room.total_rounds}</div>
+      ${langSwitch()}
+      <div class="pill">${App.room.mode==='winner'?'👑':'😈'}</div>
+    </div>
+    <div class="q-card"><div class="pre">${esc(t('mostLikelyTo'))}</div><div class="q">${esc(qText(App.room.pack, App.room.current_question))}</div></div>
+    ${banner}
+    <div class="tally">
+      ${ranked.map(p=>{
+        const c=tally[p.id]; const pct = max>0 ? Math.round(c/max*100) : 0;
+        return `<div class="trow ${c===max&&max>0?'top':''}">
+          <div class="head">${avImg(p.avatar,'sm')}<span class="nm">${esc(p.name)}</span>
+          <span class="cnt">${c} ${esc(vw(c))}</span>${c>0?`<span class="plus">+${c}</span>`:''}</div>
+          <div class="bar"><i style="width:${pct}%"></i></div></div>`;
+      }).join('')}
+    </div>
+    <div class="divider"></div>
+    <div class="label" style="margin-inline-start:4px">${App.room.mode==='winner'?'👑 '+esc(t('leaderboard')):'😈 '+esc(t('guiltometer'))}</div>
+    <div class="mini-lead">
+      ${lead.map((p,i)=>`<div class="ml-row"><span class="r">${i+1}</span>${avImg(p.avatar,'sm')}<span class="nm">${esc(p.name)}${p.id===App.me.id?' ('+esc(t('you'))+')':''}</span><span class="sc">${p.score}</span></div>`).join('')}
+    </div>
+    <div class="spacer"></div>
+    ${isHost ? `<button class="btn gold mt" onclick="nextRound()">${last?esc(t('seeResults')):esc(t('next'))}</button>` :
+      `<div class="hint mt">${esc(t('waitingContinue'))}</div>`}
+  </div>`;
+  requestAnimationFrame(()=>{ document.querySelectorAll('.bar > i').forEach(el=>{ const w=el.style.width; el.style.width='0%'; requestAnimationFrame(()=>el.style.width=w); }); });
+}
+
+function renderFinished(){
+  const mode = App.room.mode;
+  const sorted = [...App.players].sort((a,b)=> b.score-a.score);
+  const star = sorted[0];
+  const totalVotes = App.players.reduce((s,p)=>s+(p.score||0),0) || 1;
+  const isHost = App.me && App.me.is_host;
+  const label = mode==='winner' ? t('champion') : t('mostLikelyLabel');
+  fireConfetti();
+  app.innerHTML = `
+  <div class="screen">
+    <div class="topbar"><span></span>${langSwitch()}<span></span></div>
+    <div class="center"><div class="pill" style="display:inline-block">${esc(t('gameOver'))}</div></div>
+    <div class="winner-card">
+      <div class="wframe">${avImg(star?star.avatar:'x','fill')}<span class="sparkle">✦</span></div>
+      <div class="wlabel">${esc(label)}</div>
+      <div class="wname">${esc(star?star.name:'')}</div>
+    </div>
+    <div class="bars">
+      ${sorted.map(p=>{ const pct=Math.round((p.score||0)/totalVotes*100);
+        return `<div class="bar-row"><div class="bar-head"><span>${esc(p.name)}${p.id===App.me.id?' ('+esc(t('you'))+')':''}</span><span class="pctv">${pct}%</span></div><div class="rbar"><i style="width:${pct}%"></i></div></div>`; }).join('')}
+    </div>
+    <div class="spacer"></div>
+    ${isHost ? `<button class="btn gold mt" onclick="playAgain()">🔁 ${esc(t('playAgain'))}</button>` :
+      `<div class="hint mt">${esc(t('hostAgain'))}</div>`}
+    <button class="btn ghost mt-s" onclick="leaveRoom()">${esc(t('leaveGame'))}</button>
+  </div>`;
+  requestAnimationFrame(()=>{ document.querySelectorAll('.rbar > i').forEach(el=>{ const w=el.style.width; el.style.width='0%'; requestAnimationFrame(()=>el.style.width=w); }); });
+}
+
+/* ===================== PICKERS / NAV ===================== */
+function selectAvatar(av){ App.pendingAvatar=av; refreshPicker(); }
+function shuffleAvatar(){ var c=curAv(); var seed=AVSEEDS[Math.floor(Math.random()*AVSEEDS.length)]+'-'+Math.floor(Math.random()*99999); App.pendingAvatar=c.style+':'+seed; refreshPicker(); }
+function setStyle(id){ var c=curAv(); App.pendingAvatar=id+':'+c.seed; refreshPicker(); }
+function refreshPicker(){ var el=$('picker'); if(el) el.innerHTML=renderPicker(); }
+function renderPicker(){ var c=curAv(); return `<div class="picker-preview"><div class="pp-frame">${avImg(App.pendingAvatar,'fill')}</div><button type="button" class="btn gold sm shuffle" onclick="shuffleAvatar()">\uD83C\uDFB2 ${App.lang==='he'?'\u05e2\u05e8\u05d1\u05d1\u05d5':'Shuffle'}</button></div><div class="style-row">${AV_STYLES.map(s=>`<button type="button" class="style-chip ${c.style===s.id?'on':''}" onclick="setStyle('${s.id}')">${esc(s.t[App.lang]||s.t.en)}</button>`).join('')}</div><div class="seed-grid">${AVSEEDS.slice(0,10).map(seed=>{var av=c.style+':'+seed;return `<div class="av ${av===App.pendingAvatar?'selected':''}" onclick="selectAvatar('${av}')">${avImg(av,'fill')}</div>`;}).join('')}</div>`; }
+function selectPack(k,el){ App.pendingPack=k; el.closest('.chips').querySelectorAll('.chip').forEach(n=>n.classList.remove('selected')); el.classList.add('selected'); }
+function selectMode(m,el){ App.pendingMode=m; el.closest('.chips').querySelectorAll('.chip').forEach(n=>n.classList.remove('selected')); el.classList.add('selected'); }
+function selectRounds(n,el){ App.pendingRounds=n; el.closest('.seg').querySelectorAll('.chip').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); }
+function goHome(){ App.view='home'; render(); }
+function goCreate(){ App.view='create'; render(); }
+function goJoin(prefill){ App.view='join'; render(prefill); }
+
+/* ===================== CREATE / JOIN ===================== */
+async function doCreate(){
+  if(App.busy) return;
+  const name=($('cname').value||'').trim();
+  if(name.length<1){ $('cerr').textContent=t('enterName'); return; }
+  App.busy=true; const btn=$('cbtn'); btn.disabled=true; btn.textContent=t('creating');
+  const myId = crypto.randomUUID();
+  let room=null;
+  for(let attempt=0; attempt<6 && !room; attempt++){
+    const { data, error } = await sb.from('wml_rooms').insert({
+      code:genCode(), status:'lobby', mode:App.pendingMode, pack:App.pendingPack,
+      round:0, total_rounds:App.pendingRounds, host_id:myId
+    }).select().single();
+    if(!error){ room=data; break; }
+  }
+  if(!room){ App.busy=false; btn.disabled=false; btn.textContent=t('createGame'); $('cerr').textContent='⚠️'; return; }
+  const { data:me, error:pErr } = await sb.from('wml_players').insert({
+    id:myId, room_id:room.id, name, avatar:App.pendingAvatar, is_host:true
+  }).select().single();
+  if(pErr){ App.busy=false; btn.disabled=false; btn.textContent=t('createGame'); $('cerr').textContent='⚠️'; return; }
+  App.room=room; App.me=me; App.busy=false; await enterRoom();
+}
+async function doJoin(){
+  if(App.busy) return;
+  const code=($('jcode').value||'').trim().toUpperCase();
+  const name=($('jname').value||'').trim();
+  if(code.length<4){ $('jerr').textContent=t('enterCode'); return; }
+  if(name.length<1){ $('jerr').textContent=t('enterBoth'); return; }
+  App.busy=true; const btn=$('jbtn'); btn.disabled=true; btn.textContent=t('joining');
+  const { data:room, error } = await sb.from('wml_rooms').select().eq('code',code).maybeSingle();
+  if(error||!room){ App.busy=false; btn.disabled=false; btn.textContent=t('join'); $('jerr').textContent=t('noGame'); return; }
+  if(room.status==='finished'){ App.busy=false; btn.disabled=false; btn.textContent=t('join'); $('jerr').textContent=t('ended'); return; }
+  const myId = crypto.randomUUID();
+  const { data:me, error:pErr } = await sb.from('wml_players').insert({
+    id:myId, room_id:room.id, name, avatar:App.pendingAvatar, is_host:false
+  }).select().single();
+  if(pErr){ App.busy=false; btn.disabled=false; btn.textContent=t('join'); $('jerr').textContent='⚠️'; return; }
+  App.room=room; App.me=me; App.busy=false; await enterRoom();
+}
+
+/* ===================== ROOM LIFECYCLE ===================== */
+async function enterRoom(){
+  App.view='room'; saveSession();
+  await Promise.all([loadRoom(), loadPlayers(), loadVotes()]);
+  subscribe(); await ensureHost(); render(); startPolling();
+}
+async function loadRoom(){ const { data } = await sb.from('wml_rooms').select().eq('id',App.room.id).maybeSingle(); if(data) App.room=data; }
+async function loadPlayers(){
+  const { data } = await sb.from('wml_players').select().eq('room_id',App.room.id).order('created_at');
+  App.players=data||[];
+  const mine = App.players.find(p=>p.id===(App.me&&App.me.id));
+  if(mine) App.me = mine;
+}
+async function loadVotes(){
+  const { data } = await sb.from('wml_votes').select().eq('room_id',App.room.id).eq('round',(App.room&&App.room.round)||0);
+  App.votes=data||[];
+  const mine=App.votes.find(v=>v.voter_id===(App.me&&App.me.id));
+  App.myVote=mine?mine.target_id:null;
+}
+function subscribe(){
+  if(App.channel){ sb.removeChannel(App.channel); App.channel=null; }
+  const rid=App.room.id;
+  App.channel = sb.channel('wml2-'+rid)
+    .on('postgres_changes',{event:'*',schema:'public',table:'wml_rooms',filter:'id=eq.'+rid}, onRoomChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'wml_players',filter:'room_id=eq.'+rid}, onPlayersChange)
+    .on('postgres_changes',{event:'*',schema:'public',table:'wml_votes',filter:'room_id=eq.'+rid}, onVotesChange)
+    .subscribe();
+}
+async function onRoomChange(payload){
+  const prev = App.room; App.room = payload.new;
+  if(!prev || prev.round!==App.room.round){ App._revealing=false; await loadVotes(); }
+  if(App.room.status==='voting' && (!prev || prev.status!=='voting')) App._revealing=false;
+  render();
+}
+async function onPlayersChange(){ await loadPlayers(); await ensureHost(); maybeAutoReveal(); render(); }
+async function onVotesChange(){ await loadVotes(); maybeAutoReveal(); render(); }
+
+function stateSig(){
+  return JSON.stringify({ s:App.room&&App.room.status, r:App.room&&App.room.round, q:App.room&&App.room.current_question,
+    m:App.me&&App.me.is_host, p:App.players.map(p=>p.id+':'+(p.is_host?1:0)+':'+p.score),
+    v:App.votes.map(v=>v.voter_id+'>'+v.target_id).sort() });
+}
+let _polling=false;
+async function pollTick(){
+  if(!App.room||!App.me||App.view!=='room'||_polling) return;
+  _polling=true;
+  try{ const before=stateSig(); await Promise.all([loadRoom(), loadPlayers(), loadVotes()]); await ensureHost(); maybeAutoReveal(); if(stateSig()!==before) render(); }catch(e){}
+  _polling=false;
+}
+function startPolling(){ stopPolling(); App._poll=setInterval(pollTick, 2500); }
+function stopPolling(){ if(App._poll){ clearInterval(App._poll); App._poll=null; } }
+
+async function ensureHost(){
+  if(!App.me || !App.room || App.room.status==='finished') return;
+  if(App.players.length===0) return;
+  if(App.players.some(p=>p.is_host)) return;
+  const oldest = App.players[0];
+  if(oldest && oldest.id===App.me.id){ await sb.from('wml_players').update({is_host:true}).eq('id',App.me.id); App.me.is_host=true; }
+}
+async function takeHost(){
+  if(!App.me) return;
+  await sb.from('wml_players').update({is_host:false}).eq('room_id',App.room.id);
+  await sb.from('wml_players').update({is_host:true}).eq('id',App.me.id);
+  App.me.is_host=true; toast(t('takeoverDone'));
+}
+function maybeAutoReveal(){
+  if(!App.me || !App.me.is_host) return;
+  if(!App.room || App.room.status!=='voting' || App._revealing) return;
+  const voters=new Set(App.votes.map(v=>v.voter_id));
+  if(App.players.length>0 && voters.size>=App.players.length){ setTimeout(()=>revealRound(), 700); }
+}
+
+/* ===================== HOST ACTIONS ===================== */
+async function startGame(){
+  if(!App.me || !App.me.is_host) return;
+  const pack=PACKS[App.room.pack]||PACKS.party;
+  const idxs=shuffle(pack.q.map((_,i)=>i)).slice(0, App.room.total_rounds);
+  await sb.from('wml_rooms').update({status:'voting', round:1, questions:idxs, current_question:String(idxs[0])}).eq('id',App.room.id);
+  await pollTick();
+}
+async function revealRound(){
+  if(!App.me || !App.me.is_host || App._revealing) return;
+  if(App.room.status!=='voting') return;
+  App._revealing=true;
+  await loadVotes(); await loadPlayers();
+  const tally={}; App.votes.forEach(v=>{ tally[v.target_id]=(tally[v.target_id]||0)+1; });
+  for(const p of App.players){ const got=tally[p.id]||0; if(got>0){ await sb.from('wml_players').update({score:p.score+got}).eq('id',p.id); } }
+  await sb.from('wml_rooms').update({status:'reveal'}).eq('id',App.room.id);
+  App._revealing=false; await pollTick();
+}
+async function nextRound(){
+  if(!App.me || !App.me.is_host) return;
+  const r=App.room;
+  if(r.round>=r.total_rounds){ await sb.from('wml_rooms').update({status:'finished'}).eq('id',r.id); }
+  else{
+    const nr=r.round+1; const idx=(r.questions&&r.questions[nr-1]!=null)?r.questions[nr-1]:0;
+    App._revealing=false;
+    await sb.from('wml_rooms').update({status:'voting', round:nr, current_question:String(idx)}).eq('id',r.id);
+  }
+  await pollTick();
+}
+async function playAgain(){
+  if(!App.me || !App.me.is_host) return;
+  await sb.from('wml_votes').delete().eq('room_id',App.room.id);
+  await sb.from('wml_players').update({score:0,has_voted:false}).eq('room_id',App.room.id);
+  App._revealing=false;
+  await sb.from('wml_rooms').update({status:'lobby', round:0, questions:[], current_question:null}).eq('id',App.room.id);
+  await pollTick();
+}
+
+/* ===================== PLAYER ACTIONS ===================== */
+async function castVote(targetId){
+  if(App.room.status!=='voting') return;
+  App.myVote=targetId; render();
+  const { error } = await sb.from('wml_votes').upsert(
+    { room_id:App.room.id, round:App.room.round, voter_id:App.me.id, target_id:targetId },
+    { onConflict:'room_id,round,voter_id' });
+  if(error){ toast(t('voteFail')); }
+}
+async function leaveRoom(){
+  stopPolling();
+  try{ if(App.me) await sb.from('wml_players').delete().eq('id',App.me.id); }catch(e){}
+  if(App.channel){ sb.removeChannel(App.channel); App.channel=null; }
+  clearSession();
+  App.room=null; App.me=null; App.players=[]; App.votes=[]; App.myVote=null; App.view='home'; render();
+}
+async function shareRoom(){
+  const url=inviteUrl();
+  const text=(App.lang==='he'?'בואו לשחק מי הכי? קוד: ':'Join my Most Likely game! Code: ')+App.room.code;
+  if(navigator.share){ try{ await navigator.share({title:App.lang==='he'?'מי הכי?':'Most Likely', text, url}); return; }catch(e){} }
+  try{ await navigator.clipboard.writeText(url); toast(t('copied')); }catch(e){ toast(App.room.code); }
+}
+
+/* ===================== CONFETTI ===================== */
+function fireConfetti(){
+  if(typeof confetti!=='function') return;
+  const colors=['#e6c780','#f3a6c0','#c3b3f2','#a6e3d0','#f5efe2','#a6c8f3'];
+  confetti({particleCount:130,spread:85,origin:{y:.35},colors});
+  setTimeout(()=>confetti({particleCount:70,angle:60,spread:70,origin:{x:0},colors}),200);
+  setTimeout(()=>confetti({particleCount:70,angle:120,spread:70,origin:{x:1},colors}),350);
+}
+
+/* ===================== BOOT ===================== */
+async function boot(){
+  const params=new URLSearchParams(location.search);
+  try{ const sv=localStorage.getItem('wml_lang'); if(sv==='he'||sv==='en') App.lang=sv; }catch(e){}
+  const langParam=params.get('lang'); if(langParam==='he'||langParam==='en'){ App.lang=langParam; try{ localStorage.setItem('wml_lang',langParam); }catch(e){} }
+  applyLang();
+  const roomParam=params.get('room');
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('wml2')||'null'); }catch(e){}
+  if(saved && saved.roomId && saved.playerId){
+    const { data:room } = await sb.from('wml_rooms').select().eq('id',saved.roomId).maybeSingle();
+    const { data:me } = room ? await sb.from('wml_players').select().eq('id',saved.playerId).maybeSingle() : {data:null};
+    if(room && me){ App.room=room; App.me=me; await enterRoom(); return; }
+    clearSession();
+  }
+  if(roomParam){ App.view='join'; render(roomParam.toUpperCase()); return; }
+  render();
+}
+boot();
+</script>
+</body>
+</html>

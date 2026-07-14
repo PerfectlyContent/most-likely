@@ -1,0 +1,8 @@
+.DS_Store
+node_modules/
+# Capacitor native (added in Phase 2)
+/ios/App/Pods/
+/android/.gradle/
+/android/app/build/
+/*/build/
+.env

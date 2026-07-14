@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: most-likely
+    runtime: static
+    staticPublishPath: www
+    pullRequestPreviewsEnabled: false
+    buildCommand: ""
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
